@@ -1,9 +1,11 @@
 # LAB Product Validation Workflow - Complete Configuration
+# Compatible with Mendix 10.18.1 and Workflow Commons 3.12.1
 project:
   name: "LABProductValidationWorkflow"
   description: "Complete LAB Product Validation Workflow System"
   version: "1.0.0"
-  mendix_version: "11.0.0"
+  mendix_version: "10.18.1"
+  workflow_commons_version: "3.12.1"
 
 workflow:
   context_entity: "ProductValidation"
@@ -419,59 +421,70 @@ security_roles:
         - "SUB_CheckUserPermissions"
         - "ACT_GenerateValidationReport"
 
-# Workflows Configuration
+# Workflows Configuration - Compatible with Mendix 10.18.1 & Workflow Commons 3.12.1
 workflows:
   - name: "LAB_ProductValidation"
-    description: "Main LAB product validation workflow with TRUE/FALSE decision logic"
+    description: "Main LAB product validation workflow with TRUE/FALSE decision logic - optimized for Mendix 10.18.1"
     context_entity: "ProductValidation"
+    workflow_commons_version: "3.12.1"
+    compatibility_notes: "Uses Workflow Commons 3.12.1 features, compatible with Mendix 10.18.1 workflow engine"
     steps:
       - id: "start"
         name: "Start"
         type: "start_event"
-        description: "Workflow initiation"
+        description: "Workflow initiation - creates ProductValidation context for Mendix 10.18.1"
+        implementation_notes: "Configure to auto-populate InitiatedBy field with current user"
       - id: "image_acquisition"
         name: "Image Acquisition"
         type: "user_task"
-        description: "Capture product validation images"
+        description: "Capture product validation images - first interactive step"
         page: "ImageAcquisitionTask"
         assignee_expression: "$WorkflowContext/InitiatedBy"
         outcomes: ["completed", "cancelled"]
+        mendix_notes: "Use Workflow Commons 3.12.1 task assignment features"
+        implementation_guide: "Page should allow image upload, capture metadata, auto-calculate quality score"
       - id: "quality_validation"
         name: "Quality Validation"
         type: "decision"
-        description: "CRITICAL: TRUE/FALSE decision point for image quality"
+        description: "CRITICAL: TRUE/FALSE decision point for image quality - determines workflow path"
         condition: "$WorkflowContext/LAB_ProductValidation/ImageAcquisition/IsQualityApproved"
         outcomes: ["true", "false"]
+        business_rules: "TRUE continues to detailed processing, FALSE immediately terminates workflow"
+        mendix_notes: "Uses exclusive gateway in Mendix 10.18.1 workflow designer"
       - id: "detailed_acquisition"
         name: "Detailed Image Acquisition"
         type: "user_task"
-        description: "Enhanced image processing (TRUE path only)"
+        description: "Enhanced image processing and analysis (TRUE path only)"
         page: "DetailedImageAcquisitionTask"
         assignee_expression: "$WorkflowContext/InitiatedBy"
         condition: "quality_validation == true"
         outcomes: ["completed"]
+        implementation_notes: "Only accessible when quality validation passes"
       - id: "image_analysis"
         name: "Automated Analysis"
         type: "service_task"
-        description: "Automated image analysis and KPI extraction"
+        description: "Automated image analysis and algorithm processing"
         microflow: "ACT_ProcessImageAnalysis"
         condition: "quality_validation == true"
         outcomes: ["completed"]
+        mendix_notes: "Service task calls microflow for automated processing"
       - id: "kpi_extraction"
         name: "KPI Extraction"
         type: "service_task"
-        description: "Extract performance indicators"
+        description: "Extract performance indicators and measurements"
         microflow: "ACT_ExtractKPIs"
         condition: "quality_validation == true"
         outcomes: ["completed"]
+        implementation_notes: "Processes ImageAnalysis results to generate KPIs"
       - id: "lab_validation"
         name: "LAB Validation"
         type: "user_task"
-        description: "Final validation decision by LAB administrator"
+        description: "Final validation decision by LAB administrator - human oversight"
         page: "ValidationResultPage"
         assignee_role: "LABAdmin"
         condition: "quality_validation == true"
         outcomes: ["approved", "rejected", "requires_rework"]
+        security_notes: "Restricted to LABAdmin role for final decision authority"
       - id: "report_generation"
         name: "Report Generation"
         type: "service_task"
@@ -479,48 +492,77 @@ workflows:
         microflow: "ACT_GenerateValidationReport"
         condition: "quality_validation == true AND lab_validation == approved"
         outcomes: ["completed"]
+        mendix_notes: "Only generates report for approved validations"
       - id: "workflow_approved"
         name: "Workflow Approved"
         type: "end_event"
-        description: "Successful completion - TRUE outcome"
+        description: "Successful completion - TRUE outcome achieved"
         condition: "quality_validation == true AND lab_validation == approved"
         result: "true"
+        business_impact: "Product validation successful, approved for next stage"
       - id: "workflow_rejected"
         name: "Workflow Rejected"
         type: "end_event"
-        description: "Validation failed - FALSE outcome"
+        description: "Validation failed - FALSE outcome, workflow terminated"
         condition: "quality_validation == false OR lab_validation == rejected"
         result: "false"
+        business_impact: "Product validation failed, requires corrective action"
     flows:
       - from: "start"
         to: "image_acquisition"
+        description: "Initial workflow step"
       - from: "image_acquisition"
         to: "quality_validation"
         condition: "completed"
+        description: "Proceed to quality check after image capture"
       - from: "quality_validation"
         to: "detailed_acquisition"
         condition: "true"
+        description: "Quality approved - continue processing (TRUE path)"
       - from: "quality_validation"
         to: "workflow_rejected"
         condition: "false"
+        description: "Quality rejected - immediate termination (FALSE path)"
       - from: "detailed_acquisition"
         to: "image_analysis"
         condition: "completed"
+        description: "Enhanced image ready for analysis"
       - from: "image_analysis"
         to: "kpi_extraction"
         condition: "completed"
+        description: "Analysis complete, extract KPIs"
       - from: "kpi_extraction"
         to: "lab_validation"
         condition: "completed"
+        description: "KPIs ready for human validation"
       - from: "lab_validation"
         to: "report_generation"
         condition: "approved"
+        description: "Validation approved, generate report"
       - from: "lab_validation"
         to: "workflow_rejected"
         condition: "rejected"
+        description: "Human validation rejected workflow"
       - from: "report_generation"
         to: "workflow_approved"
         condition: "completed"
+        description: "Report generated, workflow successfully completed"
+    mendix_10_18_1_notes: |
+      Implementation notes for Mendix 10.18.1:
+      - Use exclusive gateways for decision points
+      - Configure task assignments using Workflow Commons 3.12.1
+      - Set up proper event handlers for state changes
+      - Configure timeout settings for user tasks
+      - Use workflow context effectively for data passing
+      - Test with different user roles and scenarios
+    workflow_commons_3_12_1_setup: |
+      Workflow Commons 3.12.1 Configuration:
+      1. Install Workflow Commons 3.12.1 from App Store
+      2. Configure in App Settings > Workflows tab
+      3. Set User entity to Administration.Account
+      4. Add required pages to navigation
+      5. Configure security roles properly
+      6. Test task assignment and completion
 
 # Pages Configuration
 pages:

@@ -46,7 +46,9 @@ def get_default_security_config():
         'security_roles': [
             {
                 'name': 'LABAdmin',
-                'description': 'Full system administration and workflow management',
+                'description': 'Full system administration and workflow management - compatible with Mendix 10.18.1',
+                'mendix_version': '10.18.1',
+                'workflow_commons_version': '3.12.1',
                 'permissions': {
                     'entity_access': {
                         'ProductValidation': 'CRUD',

@@ -83,42 +83,94 @@ def load_config(config_path):
         return None
 
 def generate_entity_xml(entity_config):
-    """Generate XML for a single entity with proper Mendix structure"""
+    """Generate XML for a single entity with proper Mendix 10.18.1 structure and comprehensive comments"""
     try:
         # Create root entity element
         entity = ET.Element("entity")
         entity.set("name", entity_config.get('name', 'UnknownEntity'))
         
-        # Add documentation if provided
+        # Add comprehensive documentation for the entity
         if 'description' in entity_config:
             documentation = ET.SubElement(entity, "documentation")
-            documentation.text = entity_config['description']
+            documentation.text = f"""
+{entity_config['description']}
+
+=== LAB WORKFLOW SYSTEM ENTITY ===
+Compatible with: Mendix 10.18.1, Workflow Commons 3.12.1
+
+Purpose: {entity_config.get('purpose', 'Core entity for LAB validation workflow')}
+Usage: {entity_config.get('usage', 'Used throughout the validation process')}
+Security: {entity_config.get('security_notes', 'Apply role-based access controls')}
+
+Generated: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}
+Generator: LAB Workflow Automation v1.0.0
+"""
         
-        # Add generalization if specified
+        # Add generalization if specified (for Mendix 10.18.1 compatibility)
         if 'generalization' in entity_config:
             generalization = ET.SubElement(entity, "generalization")
             generalization.set("type", entity_config['generalization'])
+            
+            # Add comment for generalization
+            gen_comment = ET.Comment(f" Inherits from {entity_config['generalization']} for workflow integration ")
+            entity.insert(0, gen_comment)
         
-        # Add attributes
+        # Add attributes with detailed comments
         if 'attributes' in entity_config and entity_config['attributes']:
             attributes_elem = ET.SubElement(entity, "attributes")
             
-            for attr in entity_config['attributes']:
+            # Add comment for attributes section
+            attr_comment = ET.Comment(f" Entity Attributes - {len(entity_config['attributes'])} fields defined ")
+            attributes_elem.insert(0, attr_comment)
+            
+            for i, attr in enumerate(entity_config['attributes']):
+                # Add comment before each attribute
+                attr_comment = ET.Comment(f" Attribute {i+1}: {attr.get('name', 'Unknown')} - {attr.get('description', 'No description')} ")
+                attributes_elem.append(attr_comment)
+                
                 attr_elem = ET.SubElement(attributes_elem, "attribute")
                 attr_elem.set("name", attr.get('name', 'UnknownAttribute'))
                 attr_elem.set("type", attr.get('type', 'String'))
                 
-                # Add length for string and decimal attributes
+                # Add attribute documentation
+                if 'description' in attr:
+                    attr_doc = ET.SubElement(attr_elem, "documentation")
+                    attr_doc.text = f"""
+{attr['description']}
+
+Type: {attr.get('type', 'String')}
+Required: {attr.get('required', 'No')}
+Validation: {attr.get('validation', 'Standard validation rules apply')}
+Usage: {attr.get('usage_notes', 'Used in LAB workflow processing')}
+"""
+                
+                # Add length for string and decimal attributes (Mendix 10.18.1 format)
                 if attr.get('type') in ['String', 'Decimal'] and 'length' in attr:
                     attr_elem.set("length", str(attr['length']))
                 
-                # Add enumeration reference
+                # Add enumeration reference with comment
                 if 'enumeration' in attr:
                     attr_elem.set("enumeration", attr['enumeration'])
+                    enum_comment = ET.Comment(f" References enumeration: {attr['enumeration']} ")
+                    attr_elem.insert(0, enum_comment)
                 
                 # Add default value if specified
                 if 'default' in attr:
                     attr_elem.set("default", str(attr['default']))
+                    default_comment = ET.Comment(f" Default value: {attr['default']} ")
+                    attr_elem.append(default_comment)
+        
+        # Add associations section with comments (for future use)
+        associations_comment = ET.Comment(" Associations will be added here when implementing relationships between entities ")
+        entity.append(associations_comment)
+        
+        # Add validation rules comment
+        validation_comment = ET.Comment(" Validation Rules: Implement business logic validation in microflows ")
+        entity.append(validation_comment)
+        
+        # Add security comment
+        security_comment = ET.Comment(f" Security: Configure XPath constraints for role-based access in Mendix 10.18.1 ")
+        entity.append(security_comment)
         
         return entity
         

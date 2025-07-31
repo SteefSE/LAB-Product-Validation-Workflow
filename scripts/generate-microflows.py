@@ -160,57 +160,195 @@ def get_default_microflows_config():
     }
 
 def generate_microflow_xml(microflow_config):
-    """Generate XML for a single microflow"""
+    """Generate XML for a single microflow with comprehensive comments for Mendix 10.18.1"""
     try:
         # Create root microflow element
         microflow = ET.Element("microflow")
         microflow.set("name", microflow_config.get('name', 'UnknownMicroflow'))
         microflow.set("type", microflow_config.get('type', 'action'))
         
+        # Add comprehensive header comment
+        header_comment = ET.Comment(f"""
+=== LAB WORKFLOW MICROFLOW ===
+Name: {microflow_config.get('name', 'Unknown')}
+Type: {microflow_config.get('type', 'action')}
+Compatible with: Mendix 10.18.1, Workflow Commons 3.12.1
+Generated: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}
+
+Purpose: {microflow_config.get('description', 'LAB workflow operation')}
+Security: Restricted to roles - {', '.join(microflow_config.get('security_roles', ['All users']))}
+Usage: Called from workflow steps, pages, or other microflows
+
+IMPLEMENTATION NOTES:
+- This is a template structure - implement actual business logic
+- Add proper error handling and validation
+- Use consistent naming conventions  
+- Log important actions for audit trail
+- Test with different user roles
+""")
+        microflow.insert(0, header_comment)
+        
         # Add documentation
         if 'description' in microflow_config:
             documentation = ET.SubElement(microflow, "documentation")
-            documentation.text = microflow_config['description']
+            documentation.text = f"""
+{microflow_config['description']}
+
+=== IMPLEMENTATION GUIDE ===
+
+For Mendix 10.18.1 implementation:
+1. Add input validation at the start
+2. Implement core business logic
+3. Add error handling (try-catch blocks)
+4. Log actions to audit trail
+5. Return appropriate values
+6. Test with different user roles
+
+Security Roles: {', '.join(microflow_config.get('security_roles', ['All']))}
+Return Type: {microflow_config.get('return_type', 'None')}
+
+Business Rules:
+- Validate all input parameters
+- Check user permissions
+- Update audit trail
+- Handle error scenarios gracefully
+"""
         
-        # Add parameters
+        # Add parameters section with detailed comments
         if 'parameters' in microflow_config and microflow_config['parameters']:
             parameters_elem = ET.SubElement(microflow, "parameters")
             
-            for param in microflow_config['parameters']:
+            # Add comment for parameters section
+            param_comment = ET.Comment(f" INPUT PARAMETERS - {len(microflow_config['parameters'])} parameters defined ")
+            parameters_elem.insert(0, param_comment)
+            
+            for i, param in enumerate(microflow_config['parameters']):
+                # Add comment before each parameter
+                param_detail_comment = ET.Comment(f" Parameter {i+1}: {param.get('name', 'Unknown')} ({param.get('type', 'String')}) ")
+                parameters_elem.append(param_detail_comment)
+                
                 param_elem = ET.SubElement(parameters_elem, "parameter")
                 param_elem.set("name", param.get('name', 'UnknownParam'))
                 param_elem.set("type", param.get('type', 'String'))
+                
+                # Add parameter documentation
+                param_doc = ET.SubElement(param_elem, "documentation")
+                param_doc.text = f"""
+Parameter: {param.get('name', 'Unknown')}
+Type: {param.get('type', 'String')}
+Required: Yes
+Description: {param.get('description', 'Input parameter for LAB workflow operation')}
+Validation: Validate this parameter at microflow start
+"""
         
-        # Add return type
+        # Add return type with comments
         if 'return_type' in microflow_config:
             return_elem = ET.SubElement(microflow, "returnType")
             return_elem.set("type", microflow_config['return_type'])
+            
+            # Add return type comment
+            return_comment = ET.Comment(f" RETURN TYPE: {microflow_config['return_type']} - Document what this microflow returns ")
+            return_elem.insert(0, return_comment)
         
-        # Add security settings
+        # Add security settings with detailed comments
         if 'security_roles' in microflow_config:
             security_elem = ET.SubElement(microflow, "security")
+            
+            # Add security comment
+            security_comment = ET.Comment(f" SECURITY CONFIGURATION - Restricted to: {', '.join(microflow_config['security_roles'])} ")
+            security_elem.insert(0, security_comment)
+            
             for role in microflow_config['security_roles']:
                 role_elem = ET.SubElement(security_elem, "allowedRole")
                 role_elem.set("name", role)
+                
+                # Add role-specific comment
+                role_comment = ET.Comment(f" Role: {role} - Ensure users have this role to execute microflow ")
+                role_elem.insert(0, role_comment)
         
-        # Add basic microflow flow (start -> end)
+        # Add microflow flow structure with comprehensive comments
         flow_elem = ET.SubElement(microflow, "flow")
         
-        # Start event
+        # Add flow structure comment
+        flow_comment = ET.Comment(f"""
+MICROFLOW FLOW STRUCTURE for Mendix 10.18.1
+This is a template - implement actual logic:
+
+1. START EVENT - Entry point
+2. INPUT VALIDATION - Validate all parameters
+3. PERMISSION CHECK - Verify user permissions  
+4. BUSINESS LOGIC - Core functionality
+5. AUDIT LOGGING - Record action
+6. ERROR HANDLING - Handle exceptions
+7. END EVENT - Return result
+
+Remember to:
+- Add proper activities between start and end
+- Use consistent variable naming
+- Add error handling paths
+- Log important actions
+- Test thoroughly
+""")
+        flow_elem.insert(0, flow_comment)
+        
+        # Start event with comment
+        start_comment = ET.Comment(" START EVENT - Microflow entry point ")
+        flow_elem.append(start_comment)
         start_elem = ET.SubElement(flow_elem, "start")
         start_elem.set("id", "start")
         start_elem.set("name", "Start")
         
-        # End event
+        # Add validation activity comment
+        validation_comment = ET.Comment(" TODO: Add input validation activities here ")
+        flow_elem.append(validation_comment)
+        
+        # Add business logic comment
+        logic_comment = ET.Comment(" TODO: Add core business logic activities here ")
+        flow_elem.append(logic_comment)
+        
+        # Add audit trail comment
+        audit_comment = ET.Comment(" TODO: Add audit trail logging here ")
+        flow_elem.append(audit_comment)
+        
+        # End event with comment
+        end_comment = ET.Comment(" END EVENT - Microflow exit point ")
+        flow_elem.append(end_comment)
         end_elem = ET.SubElement(flow_elem, "end")
         end_elem.set("id", "end")
         end_elem.set("name", "End")
         
-        # Sequence flow
+        # Sequence flow with comment
+        sequence_comment = ET.Comment(" SEQUENCE FLOW - Connect activities in logical order ")
+        flow_elem.append(sequence_comment)
         sequence_elem = ET.SubElement(flow_elem, "sequenceFlow")
         sequence_elem.set("id", "flow1")
         sequence_elem.set("sourceRef", "start")
         sequence_elem.set("targetRef", "end")
+        
+        # Add implementation notes comment
+        impl_comment = ET.Comment(f"""
+IMPLEMENTATION CHECKLIST for {microflow_config.get('name', 'Unknown')}:
+
+□ Input validation added
+□ Permission checks implemented  
+□ Core business logic completed
+□ Error handling paths added
+□ Audit trail logging included
+□ Return values configured
+□ Security roles tested
+□ Performance optimized
+□ Documentation updated
+□ Unit tests created
+
+Mendix 10.18.1 Best Practices:
+- Use proper activity naming
+- Add meaningful comments
+- Handle null values
+- Use consistent error messages
+- Log important actions
+- Test with different data scenarios
+""")
+        microflow.append(impl_comment)
         
         return microflow
         

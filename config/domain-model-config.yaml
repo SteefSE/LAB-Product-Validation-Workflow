@@ -1,17 +1,245 @@
-# LAB Domain Model Configuration 
-entities: 
-  - name: "ProductValidation" 
-    generalization: "System.WorkflowContext" 
-    attributes: 
-      - name: "ProductID" 
-        type: "String" 
-        length: 50 
-      - name: "WorkflowOutcome" 
-        type: "Boolean" 
- 
-  - name: "ImageAcquisition" 
-    attributes: 
-      - name: "ImageFile" 
-        type: "System.Image" 
-      - name: "IsQualityApproved" 
-        type: "Boolean" 
+# LAB Product Validation Workflow - Enhanced Domain Model Configuration
+project:
+  name: "LABProductValidationWorkflow"
+  description: "Complete LAB Product Validation Workflow System"
+  version: "1.0.0"
+  mendix_version: "11.0.0"
+
+workflow:
+  context_entity: "ProductValidation"
+  name: "LAB_ProductValidation"
+  description: "Main validation workflow with TRUE/FALSE outcomes"
+
+# Enhanced Entity Definitions
+entities:
+  - name: "ProductValidation"
+    description: "Main workflow context entity for product validation processes"
+    generalization: "System.WorkflowContext"
+    attributes:
+      - name: "ProductID"
+        type: "String"
+        length: 50
+        description: "Unique identifier for the product being validated"
+      - name: "WorkflowOutcome"
+        type: "Boolean"
+        description: "Final TRUE/FALSE outcome of the validation workflow"
+      - name: "ValidationStage"
+        type: "Enumeration"
+        enumeration: "WorkflowStage"
+        description: "Current stage in the validation process"
+      - name: "CreatedDate"
+        type: "DateTime"
+        description: "When the validation process was initiated"
+      - name: "CompletedDate"
+        type: "DateTime"
+        description: "When the validation process was completed"
+      - name: "InitiatedBy"
+        type: "String"
+        length: 50
+        description: "User who initiated the validation workflow"
+
+  - name: "ImageAcquisition"
+    description: "Entity for capturing and storing validation images"
+    attributes:
+      - name: "ImageFile"
+        type: "System.Image"
+        description: "The actual image file captured for validation"
+      - name: "IsQualityApproved"
+        type: "Boolean"
+        description: "Whether the image quality meets validation standards"
+      - name: "TechnicianID"
+        type: "String"
+        length: 50
+        description: "ID of the technician who captured the image"
+      - name: "AcquisitionDate"
+        type: "DateTime"
+        description: "When the image was captured"
+      - name: "QualityScore"
+        type: "Decimal"
+        length: 8
+        description: "Numerical quality score (0-100)"
+      - name: "ImageMetadata"
+        type: "String"
+        length: 500
+        description: "Technical metadata about the image capture"
+
+  - name: "DetailedImageAcquisition"
+    description: "Enhanced image processing and analysis"
+    attributes:
+      - name: "EnhancedImageFile"
+        type: "System.Image"
+        description: "Processed and enhanced version of the original image"
+      - name: "ProcessingStatus"
+        type: "Enumeration"
+        enumeration: "ProcessingStatus"
+        description: "Current status of image processing"
+      - name: "ProcessedBy"
+        type: "String"
+        length: 50
+        description: "User who processed the enhanced image"
+      - name: "ProcessingDate"
+        type: "DateTime"
+        description: "When the image processing was completed"
+      - name: "ProcessingNotes"
+        type: "String"
+        length: 1000
+        description: "Notes about the processing steps taken"
+
+  - name: "ImageAnalysis"
+    description: "Automated analysis results of validation images"
+    attributes:
+      - name: "AnalysisResult"
+        type: "String"
+        length: 2000
+        description: "Detailed analysis results in JSON format"
+      - name: "ConfidenceScore"
+        type: "Decimal"
+        length: 8
+        description: "Confidence level of the analysis (0-1)"
+      - name: "AnalysisDate"
+        type: "DateTime"
+        description: "When the analysis was performed"
+      - name: "AnalysisAlgorithm"
+        type: "String"
+        length: 100
+        description: "Name/version of the analysis algorithm used"
+      - name: "ProcessedBy"
+        type: "String"
+        length: 50
+        description: "User who initiated the analysis"
+
+  - name: "KPIExtraction"
+    description: "Key Performance Indicators extracted from validation process"
+    attributes:
+      - name: "KPIData"
+        type: "String"
+        length: 5000
+        description: "Extracted KPI data in structured format"
+      - name: "ExtractionDate"
+        type: "DateTime"
+        description: "When KPIs were extracted"
+      - name: "ExtractedBy"
+        type: "String"
+        length: 50
+        description: "User who performed KPI extraction"
+      - name: "KPIScore"
+        type: "Decimal"
+        length: 8
+        description: "Overall KPI score for this validation"
+      - name: "Metrics"
+        type: "String"
+        length: 2000
+        description: "Additional metrics in JSON format"
+
+  - name: "ValidationResult"
+    description: "Final validation decision and supporting information"
+    attributes:
+      - name: "Result"
+        type: "Enumeration"
+        enumeration: "ValidationOutcome"
+        description: "Final validation outcome (Approved/Rejected/Pending)"
+      - name: "ValidatedBy"
+        type: "String"
+        length: 50
+        description: "User who made the final validation decision"
+      - name: "ValidationDate"
+        type: "DateTime"
+        description: "When the validation decision was made"
+      - name: "Comments"
+        type: "String"
+        length: 1000
+        description: "Comments explaining the validation decision"
+      - name: "RecommendedActions"
+        type: "String"
+        length: 2000
+        description: "Recommended next steps based on validation result"
+
+  - name: "ValidationReport"
+    description: "Comprehensive report of the validation process"
+    attributes:
+      - name: "ReportContent"
+        type: "String"
+        length: 10000
+        description: "Full report content in structured format"
+      - name: "ReportGenerated"
+        type: "DateTime"
+        description: "When the report was generated"
+      - name: "GeneratedBy"
+        type: "String"
+        length: 50
+        description: "User who generated the report"
+      - name: "ReportFormat"
+        type: "Enumeration"
+        enumeration: "ReportFormat"
+        description: "Format of the report (PDF/HTML/JSON)"
+      - name: "ReportFile"
+        type: "System.FileDocument"
+        description: "Generated report file attachment"
+
+  - name: "WorkflowAuditTrail"
+    description: "Complete audit trail of all workflow activities"
+    attributes:
+      - name: "Action"
+        type: "String"
+        length: 100
+        description: "Description of the action performed"
+      - name: "ActionDate"
+        type: "DateTime"
+        description: "When the action was performed"
+      - name: "PerformedBy"
+        type: "String"
+        length: 50
+        description: "User who performed the action"
+      - name: "EntityChanged"
+        type: "String"
+        length: 50
+        description: "Which entity was affected by this action"
+      - name: "OldValue"
+        type: "String"
+        length: 500
+        description: "Previous value before the change"
+      - name: "NewValue"
+        type: "String"
+        length: 500
+        description: "New value after the change"
+      - name: "IPAddress"
+        type: "String"
+        length: 45
+        description: "IP address of the user who performed the action"
+
+# Enumeration Definitions
+enumerations:
+  - name: "WorkflowStage"
+    values:
+      - "ImageAcquisition"
+      - "QualityValidation"
+      - "DetailedAcquisition"
+      - "Analysis"
+      - "KPIExtraction"
+      - "LABValidation"
+      - "ReportGeneration"
+      - "Completed"
+
+  - name: "ProcessingStatus"
+    values:
+      - "Pending"
+      - "InProgress"
+      - "Completed"
+      - "Failed"
+      - "RequiresReview"
+
+  - name: "ValidationOutcome"
+    values:
+      - "Approved"
+      - "Rejected"
+      - "Pending"
+      - "RequiresRework"
+      - "ConditionalApproval"
+
+  - name: "ReportFormat"
+    values:
+      - "PDF"
+      - "HTML"
+      - "JSON"
+      - "XML"
+      - "Excel"

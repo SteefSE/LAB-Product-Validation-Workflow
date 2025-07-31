@@ -1,1 +1,326 @@
-node_modules/  __pycache__/  *.pyc  .vscode/settings.json  output/  *.log  .env 
+# LAB Product Validation Workflow - Git Ignore File
+
+# =============================================================================
+# OUTPUT FILES - Generated Content (Don't commit these)
+# =============================================================================
+output/
+output/**/*
+*.generated.xml
+generated/
+temp/
+tmp/
+
+# Project Summary Files
+PROJECT_SUMMARY.md
+GENERATION_LOG.txt
+
+# =============================================================================
+# PYTHON
+# =============================================================================
+# Byte-compiled / optimized / DLL files
+__pycache__/
+*.py[cod]
+*$py.class
+
+# C extensions
+*.so
+
+# Distribution / packaging
+.Python
+build/
+develop-eggs/
+dist/
+downloads/
+eggs/
+.eggs/
+lib/
+lib64/
+parts/
+sdist/
+var/
+wheels/
+share/python-wheels/
+*.egg-info/
+.installed.cfg
+*.egg
+MANIFEST
+
+# PyInstaller
+#  Usually these files are written by a python script from a template
+#  before PyInstaller builds the exe, so as to inject date/other infos into it.
+*.manifest
+*.spec
+
+# Installer logs
+pip-log.txt
+pip-delete-this-directory.txt
+
+# Unit test / coverage reports
+htmlcov/
+.tox/
+.nox/
+.coverage
+.coverage.*
+.cache
+nosetests.xml
+coverage.xml
+*.cover
+*.py,cover
+.hypothesis/
+.pytest_cache/
+cover/
+
+# Environments
+.env
+.venv
+env/
+venv/
+ENV/
+env.bak/
+venv.bak/
+
+# =============================================================================
+# NODE.JS / NPM
+# =============================================================================
+node_modules/
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+lerna-debug.log*
+.pnpm-debug.log*
+
+# Runtime data
+pids
+*.pid
+*.seed
+*.pid.lock
+
+# Coverage directory used by tools like istanbul
+coverage/
+*.lcov
+
+# nyc test coverage
+.nyc_output
+
+# Dependency directories
+jspm_packages/
+
+# Optional npm cache directory
+.npm
+
+# Optional eslint cache
+.eslintcache
+
+# Optional stylelint cache
+.stylelintcache
+
+# Microbundle cache
+.rpt2_cache/
+.rts2_cache_cjs/
+.rts2_cache_es/
+.rts2_cache_umd/
+
+# Optional REPL history
+.node_repl_history
+
+# Output of 'npm pack'
+*.tgz
+
+# Yarn Integrity file
+.yarn-integrity
+
+# =============================================================================
+# MENDIX SPECIFIC
+# =============================================================================
+# Mendix deployment packages
+*.mda
+*.mpk
+*.mxbuild
+
+# Mendix temporary files
+*.tmp
+*.bak
+*.orig
+
+# Mendix logs
+*.log
+logs/
+mendix-logs/
+
+# Mendix user settings
+*.user
+userlib/
+
+# =============================================================================
+# WINDOWS
+# =============================================================================
+# Windows thumbnail cache files
+Thumbs.db
+Thumbs.db:encryptable
+ehthumbs.db
+ehthumbs_vista.db
+
+# Dump file
+*.stackdump
+
+# Folder config file
+[Dd]esktop.ini
+
+# Recycle Bin used on file shares
+$RECYCLE.BIN/
+
+# Windows Installer files
+*.cab
+*.msi
+*.msix
+*.msm
+*.msp
+
+# Windows shortcuts
+*.lnk
+
+# =============================================================================
+# VS CODE
+# =============================================================================
+.vscode/settings.json
+.vscode/tasks.json
+.vscode/launch.json
+.vscode/extensions.json
+.vscode/*.code-snippets
+
+# Local History for Visual Studio Code
+.history/
+
+# Built Visual Studio Code Extensions
+*.vsix
+
+# =============================================================================
+# MACOS
+# =============================================================================
+# General
+.DS_Store
+.AppleDouble
+.LSOverride
+
+# Icon must end with two \r
+Icon
+
+# Thumbnails
+._*
+
+# Files that might appear in the root of a volume
+.DocumentRevisions-V100
+.fseventsd
+.Spotlight-V100
+.TemporaryItems
+.Trashes
+.VolumeIcon.icns
+.com.apple.timemachine.donotpresent
+
+# Directories potentially created on remote AFP share
+.AppleDB
+.AppleDesktop
+Network Trash Folder
+Temporary Items
+.apdisk
+
+# =============================================================================
+# LINUX
+# =============================================================================
+*~
+
+# temporary files which can be created if a process still has a handle open of a deleted file
+.fuse_hidden*
+
+# KDE directory preferences
+.directory
+
+# Linux trash folder which might appear on any partition or disk
+.Trash-*
+
+# .nfs files are created when an open file is removed but is still being accessed
+.nfs*
+
+# =============================================================================
+# BATCH FILES TEMP
+# =============================================================================
+temp_count.txt
+*.tmp
+*.temp
+
+# =============================================================================
+# BACKUPS
+# =============================================================================
+*.backup
+*.old
+*~
+*.swp
+*.swo
+
+# =============================================================================
+# CONFIGURATION FILES (Keep these but ignore sensitive ones)
+# =============================================================================
+# Keep config templates but ignore actual config with secrets
+config/*.secret.yaml
+config/*.local.yaml
+config/secrets/
+.secrets/
+
+# =============================================================================
+# CUSTOM PROJECT SPECIFIC
+# =============================================================================
+# Debug output files
+debug_*.txt
+debug_*.log
+
+# Test data
+test_data/
+sample_data/
+
+# Documentation builds (if using doc generators)
+docs/_build/
+docs/build/
+
+# =============================================================================
+# ARCHIVES
+# =============================================================================
+*.7z
+*.dmg
+*.gz
+*.iso
+*.jar
+*.rar
+*.tar
+*.zip
+
+# =============================================================================
+# DATABASES
+# =============================================================================
+*.db
+*.sqlite
+*.sqlite3
+
+# =============================================================================
+# IDEs
+# =============================================================================
+# JetBrains
+.idea/
+
+# Sublime Text
+*.sublime-project
+*.sublime-workspace
+
+# Vim
+*.vim
+Session.vim
+.netrwhist
+
+# Emacs
+*~
+\#*\#
+/.emacs.desktop
+/.emacs.desktop.lock
+*.elc
+auto-save-list
+tramp
+.\#*

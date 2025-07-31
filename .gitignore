@@ -260,7 +260,11 @@ temp_count.txt
 # =============================================================================
 # CONFIGURATION FILES (Keep these but ignore sensitive ones)
 # =============================================================================
-# Keep config templates but ignore actual config with secrets
+# Keep config templates and main config files - these should be committed
+!config/*.yaml
+!config/*.yml
+
+# But ignore actual config with secrets (if any)
 config/*.secret.yaml
 config/*.local.yaml
 config/secrets/

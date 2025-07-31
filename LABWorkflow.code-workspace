@@ -1,0 +1,18 @@
+{ 
+  "folders": [ 
+    { 
+      "name": "LAB Workflow Project", 
+      "path": "." 
+    } 
+  ], 
+  "settings": { 
+    "python.defaultInterpreterPath": "python", 
+    "editor.formatOnSave": true 
+  }, 
+  "extensions": { 
+    "recommendations": [ 
+      "ms-python.python", 
+      "redhat.vscode-yaml" 
+    ] 
+  } 
+} 

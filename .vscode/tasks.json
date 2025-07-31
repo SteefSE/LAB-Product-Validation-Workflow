@@ -1,0 +1,18 @@
+{ 
+  "version": "2.0.0", 
+  "tasks": [ 
+    { 
+      "label": "Generate Domain Model", 
+      "type": "shell", 
+      "command": "python", 
+      "args": ["scripts/generate-domain-model.py"], 
+      "group": "build" 
+    }, 
+    { 
+      "label": "Generate Complete Project", 
+      "type": "shell", 
+      "command": "automation\\generate-project.bat", 
+      "group": "build" 
+    } 
+  ] 
+} 

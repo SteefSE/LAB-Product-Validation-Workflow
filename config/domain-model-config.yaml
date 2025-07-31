@@ -1,0 +1,17 @@
+# LAB Domain Model Configuration 
+entities: 
+  - name: "ProductValidation" 
+    generalization: "System.WorkflowContext" 
+    attributes: 
+      - name: "ProductID" 
+        type: "String" 
+        length: 50 
+      - name: "WorkflowOutcome" 
+        type: "Boolean" 
+ 
+  - name: "ImageAcquisition" 
+    attributes: 
+      - name: "ImageFile" 
+        type: "System.Image" 
+      - name: "IsQualityApproved" 
+        type: "Boolean" 

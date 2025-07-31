@@ -1,0 +1,11 @@
+# LAB Product Validation Workflow Configuration 
+project: 
+  name: "LABProductValidationWorkflow" 
+  description: "Complete LAB Product Validation Workflow System" 
+  version: "1.0.0" 
+  mendix_version: "11.0.0" 
+ 
+workflow: 
+  context_entity: "ProductValidation" 
+  name: "LAB_ProductValidation" 
+  description: "Main validation workflow with TRUE/FALSE outcomes" 

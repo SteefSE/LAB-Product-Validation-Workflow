@@ -91,8 +91,19 @@ if not exist "output\enumerations" mkdir "output\enumerations"
 echo %GREEN%✅ Additional directories created%NC%
 echo.
 
-:: Step 8: Generate summary report
-echo %BLUE%[8/8] Generating project summary...%NC%
+:: Step 8: Generate MPK Package
+echo %BLUE%[8/9] Generating MPK Package...%NC%
+python scripts\generate-mpk-package.py --output output --filename LABProductValidationWorkflow_v1.0.0.mpk
+if %errorlevel% neq 0 (
+    echo %RED%ERROR: MPK package generation failed%NC%
+    pause
+    exit /b 1
+)
+echo %GREEN%✅ MPK package generation completed%NC%
+echo.
+
+:: Step 9: Generate summary report
+echo %BLUE%[9/9] Generating project summary...%NC%
 (
 echo # LAB Product Validation Workflow - Generation Summary
 echo.
@@ -135,6 +146,7 @@ echo   ✅ Microflows (10 core actions)
 echo   ✅ Pages (10 role-specific pages)
 echo   ✅ Security Roles (3 roles with XPath constraints)
 echo   ✅ Workflows (1 complete TRUE/FALSE workflow)
+echo   ✅ MPK Package (ready for Studio Pro import)
 echo   ✅ Project structure validation
 echo.
 echo %BLUE%Generated Files:%NC%

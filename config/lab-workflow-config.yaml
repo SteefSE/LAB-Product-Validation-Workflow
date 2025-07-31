@@ -1,16 +1,36 @@
-# LAB Product Validation Workflow - Complete Configuration
+# LAB Product Validation Workflow - FIXED Configuration
 # Compatible with Mendix 10.18.1 and Workflow Commons 3.12.1
+
 project:
   name: "LABProductValidationWorkflow"
-  description: "Complete LAB Product Validation Workflow System"
-  version: "1.0.0"
+  description: "Complete LAB Product Validation Workflow System - FIXED VERSION"
+  version: "1.0.1"
   mendix_version: "10.18.1"
   workflow_commons_version: "3.12.1"
+  target_platform: "mendix_studio_pro"
 
+# Workflow Configuration
 workflow:
   context_entity: "ProductValidation"
   name: "LAB_ProductValidation"
   description: "Main validation workflow with TRUE/FALSE outcomes"
+  workflow_type: "sequential"
+  max_concurrent_instances: 50
+  timeout_hours: 72
+
+# Entity Configuration (Compatible with Mendix 10.18.1)
+entities:
+  context_entity: "ProductValidation"
+  workflow_entities:
+    - "System.WorkflowUserTask"    # For active tasks (10.18.1 compatible)
+    - "System.Workflow"            # For workflow instances
+    - "Administration.Account"     # For user references
+  
+  # AVOID these entities in Mendix 10.18.1:
+  deprecated_entities:
+    - "System.WorkflowEndedUserTask"     # Only available in Mendix 11+
+    - "WorkflowCommons.UserTaskView"     # Deprecated in WF Commons 4.0+
+    - "WorkflowCommons.WorkflowView"     # Deprecated in WF Commons 4.0+
 
 # Microflows Configuration
 microflows:
@@ -26,6 +46,7 @@ microflows:
         type: "ProductValidation"
     return_type: "System.WorkflowUserTask"
     security_roles: ["LABAdmin", "LABTechnician"]
+    compatibility: "mendix_10_18_1"
 
   - name: "ACT_AssignTask"
     type: "action"
@@ -33,10 +54,11 @@ microflows:
     parameters:
       - name: "Task"
         type: "System.WorkflowUserTask"
-      - name: "NewAssignee"
+      - name: "NewAssignee" 
         type: "Administration.Account"
     return_type: "Boolean"
     security_roles: ["LABAdmin"]
+    compatibility: "mendix_10_18_1"
 
   - name: "ACT_CompleteTask"
     type: "action"
@@ -48,6 +70,7 @@ microflows:
         type: "String"
     return_type: "Boolean"
     security_roles: ["LABAdmin", "LABTechnician"]
+    compatibility: "mendix_10_18_1"
 
   - name: "SUB_CheckUserPermissions"
     type: "submicroflow"
@@ -61,6 +84,7 @@ microflows:
         type: "String"
     return_type: "Boolean"
     security_roles: ["LABAdmin", "LABTechnician", "LABViewer"]
+    compatibility: "mendix_10_18_1"
 
   - name: "ACT_ProcessImageQuality"
     type: "action"
@@ -72,6 +96,7 @@ microflows:
         type: "Decimal"
     return_type: "Boolean"
     security_roles: ["LABAdmin", "LABTechnician"]
+    compatibility: "mendix_10_18_1"
 
   - name: "DS_GetMyTasks"
     type: "datasource"
@@ -80,46 +105,53 @@ microflows:
       - name: "CurrentUser"
         type: "Administration.Account"
     return_type: "List of System.WorkflowUserTask"
-    security_roles: ["LABAdmin", "LABTechnician"]
+    security_roles: ["LABAdmin", "LABTechnician", "LABViewer"]
+    xpath_constraint: "[System.WorkflowUserTask_Account = $CurrentUser]"
+    compatibility: "mendix_10_18_1"
 
   - name: "ACT_InitiateWorkflow"
     type: "action"
-    description: "Initiates new LAB validation workflow instance"
-    parameters:
-      - name: "ProductID"
-        type: "String"
-      - name: "InitiatedBy"
-        type: "Administration.Account"
-    return_type: "ProductValidation"
-    security_roles: ["LABAdmin", "LABTechnician"]
-
-  - name: "ACT_GenerateValidationReport"
-    type: "action"
-    description: "Generates comprehensive validation report"
+    description: "Initiates new LAB Product Validation workflow instance"
     parameters:
       - name: "ProductValidation"
         type: "ProductValidation"
+      - name: "InitiatingUser"
+        type: "Administration.Account"
+    return_type: "System.Workflow"
+    security_roles: ["LABAdmin", "LABTechnician"]
+    compatibility: "mendix_10_18_1"
+
+  - name: "ACT_GenerateValidationReport"
+    type: "action"
+    description: "Generates comprehensive validation report with all workflow data"
+    parameters:
+      - name: "ProductValidation"
+        type: "ProductValidation"
+      - name: "ReportFormat"
+        type: "ReportFormat"
     return_type: "ValidationReport"
-    security_roles: ["LABAdmin", "LABTechnician", "LABViewer"]
+    security_roles: ["LABAdmin", "LABTechnician"]
+    compatibility: "mendix_10_18_1"
 
   - name: "ACT_UpdateAuditTrail"
     type: "action"
-    description: "Records action in workflow audit trail"
+    description: "Updates workflow audit trail with action details"
     parameters:
-      - name: "Action"
+      - name: "ActionType"
+        type: "AuditActionType"
+      - name: "EntityAffected"
         type: "String"
-      - name: "EntityChanged"
-        type: "String"
-      - name: "OldValue"
-        type: "String"
-      - name: "NewValue"
+      - name: "PerformedBy"
+        type: "Administration.Account"
+      - name: "ChangeDetails"
         type: "String"
     return_type: "WorkflowAuditTrail"
     security_roles: ["LABAdmin", "LABTechnician"]
+    compatibility: "mendix_10_18_1"
 
   - name: "ACT_ValidateWorkflowOutcome"
     type: "action"
-    description: "Critical TRUE/FALSE decision point for workflow progression"
+    description: "Validates final workflow outcome and determines TRUE/FALSE result"
     parameters:
       - name: "ProductValidation"
         type: "ProductValidation"
@@ -127,11 +159,120 @@ microflows:
         type: "String"
     return_type: "Boolean"
     security_roles: ["LABAdmin"]
+    compatibility: "mendix_10_18_1"
 
-# Enumerations Configuration
+# Workflow Stages (Sequential Processing)
+workflow_stages:
+  - name: "ImageAcquisition"
+    description: "Initial image capture and basic quality check"
+    task_template: "ImageAcquisitionTask" 
+    estimated_duration_minutes: 30
+    required_role: "LABTechnician"
+    success_criteria: "Image captured with acceptable quality"
+    
+  - name: "QualityValidation"
+    description: "Critical quality validation checkpoint - TRUE/FALSE decision"
+    task_template: "ImageQualityValidationTask"
+    estimated_duration_minutes: 15
+    required_role: "LABTechnician"
+    success_criteria: "Quality meets minimum threshold"
+    decision_point: true
+    on_failure: "terminate_workflow"
+    
+  - name: "DetailedAcquisition"
+    description: "Enhanced image processing if quality approved"
+    task_template: "DetailedImageAcquisitionTask"
+    estimated_duration_minutes: 45
+    required_role: "LABTechnician"
+    success_criteria: "Enhanced image processing completed"
+    conditional: true
+    condition: "Previous stage passed quality validation"
+    
+  - name: "Analysis"
+    description: "Comprehensive image analysis and processing"
+    task_template: "ImageAnalysisTask"
+    estimated_duration_minutes: 60
+    required_role: "LABTechnician"
+    success_criteria: "Analysis completed with confidence > 90%"
+    
+  - name: "KPIExtraction"
+    description: "Extract key performance indicators from analysis"
+    task_template: "KPIExtractionTask"
+    estimated_duration_minutes: 20
+    required_role: "LABTechnician"
+    success_criteria: "All required KPIs extracted successfully"
+    
+  - name: "LABValidation"
+    description: "Final validation and approval by LAB administrator"
+    task_template: "LABValidationTask"
+    estimated_duration_minutes: 30
+    required_role: "LABAdmin"
+    success_criteria: "Final approval granted"
+    
+  - name: "ReportGeneration"
+    description: "Generate comprehensive validation report"
+    task_template: "ReportGenerationTask"
+    estimated_duration_minutes: 15
+    required_role: "LABTechnician"
+    success_criteria: "Report generated and distributed"
+
+# Enumerations
 enumerations:
+  - name: "ValidationStatus"
+    values:
+      - name: "Pending"
+        caption: "Pending"
+        description: "Validation request received and queued"
+      - name: "InProgress"
+        caption: "In Progress" 
+        description: "Validation currently being processed"
+      - name: "Approved"
+        caption: "Approved"
+        description: "Validation passed all requirements"
+      - name: "Rejected"
+        caption: "Rejected"
+        description: "Validation failed requirements"
+      - name: "OnHold"
+        caption: "On Hold"
+        description: "Validation temporarily suspended"
+      - name: "Completed"
+        caption: "Completed"
+        description: "Validation process fully completed"
+
+  - name: "Priority"
+    values:
+      - name: "Low"
+        caption: "Low"
+        description: "Standard processing priority"
+      - name: "Medium"
+        caption: "Medium"
+        description: "Elevated processing priority"
+      - name: "High"
+        caption: "High"
+        description: "High priority processing"
+      - name: "Critical"
+        caption: "Critical"
+        description: "Immediate processing required"
+
+  - name: "ImageQuality"
+    values:
+      - name: "Poor"
+        caption: "Poor"
+        description: "Below acceptable quality standards"
+      - name: "Fair"
+        caption: "Fair"
+        description: "Meets minimum quality requirements"
+      - name: "Good"
+        caption: "Good"
+        description: "Good quality, suitable for processing"
+      - name: "Excellent"
+        caption: "Excellent"
+        description: "Excellent quality, optimal for analysis"
+      - name: "Outstanding"
+        caption: "Outstanding"
+        description: "Exceptional quality, exceeds requirements"
+
   - name: "WorkflowStage"
-    description: "Stages in the LAB product validation workflow"
     values:
       - name: "ImageAcquisition"
         caption: "Image Acquisition"
@@ -144,181 +285,33 @@ enumerations:
         description: "Enhanced image processing phase"
       - name: "Analysis"
         caption: "Analysis"
-        description: "Automated image analysis phase"
+        description: "Comprehensive analysis phase"
       - name: "KPIExtraction"
         caption: "KPI Extraction"
-        description: "Performance indicators extraction phase"
+        description: "Key performance indicator extraction phase"
       - name: "LABValidation"
         caption: "LAB Validation"
-        description: "Final human validation phase"
+        description: "Final validation and approval phase"
       - name: "ReportGeneration"
         caption: "Report Generation"
-        description: "Comprehensive report creation phase"
-      - name: "Completed"
-        caption: "Completed"
-        description: "Workflow successfully completed"
+        description: "Final report creation and distribution phase"
 
-  - name: "ProcessingStatus"
-    description: "Status of image processing and analysis tasks"
+  - name: "ApprovalLevel"
     values:
-      - name: "Pending"
-        caption: "Pending"
-        description: "Task is waiting to be processed"
-      - name: "InProgress"
-        caption: "In Progress"
-        description: "Task is currently being processed"
-      - name: "Completed"
-        caption: "Completed"
-        description: "Task has been successfully completed"
-      - name: "Failed"
-        caption: "Failed"
-        description: "Task processing has failed"
-      - name: "RequiresReview"
-        caption: "Requires Review"
-        description: "Task needs manual review"
-      - name: "Cancelled"
-        caption: "Cancelled"
-        description: "Task has been cancelled"
+      - name: "Technician"
+        caption: "Technician"
+        description: "Technician-level approval"
+      - name: "Supervisor"
+        caption: "Supervisor"
+        description: "Supervisor-level approval required"
+      - name: "Manager"
+        caption: "Manager"
+        description: "Manager-level approval required"
+      - name: "Director"
+        caption: "Director"
+        description: "Director-level approval required"
 
-  - name: "ValidationOutcome"
-    description: "Final validation decision outcomes"
-    values:
-      - name: "Approved"
-        caption: "Approved"
-        description: "Validation passed - product approved"
-      - name: "Rejected"
-        caption: "Rejected"
-        description: "Validation failed - product rejected"
-      - name: "Pending"
-        caption: "Pending"
-        description: "Validation decision is pending"
-      - name: "RequiresRework"
-        caption: "Requires Rework"
-        description: "Product needs additional work"
-      - name: "ConditionalApproval"
-        caption: "Conditional Approval"
-        description: "Approved with conditions"
-      - name: "Escalated"
-        caption: "Escalated"
-        description: "Decision escalated to higher authority"
-
-  - name: "ReportFormat"
-    description: "Available formats for validation reports"
-    values:
-      - name: "PDF"
-        caption: "PDF"
-        description: "Portable Document Format"
-      - name: "HTML"
-        caption: "HTML"
-        description: "Web page format"
-      - name: "JSON"
-        caption: "JSON"
-        description: "JavaScript Object Notation"
-      - name: "XML"
-        caption: "XML"
-        description: "Extensible Markup Language"
-      - name: "Excel"
-        caption: "Excel"
-        description: "Microsoft Excel spreadsheet"
-      - name: "CSV"
-        caption: "CSV"
-        description: "Comma-separated values"
-
-  - name: "QualityLevel"
-    description: "Quality assessment levels for images and processes"
-    values:
-      - name: "Poor"
-        caption: "Poor"
-        description: "Quality is below acceptable standards"
-      - name: "Fair"
-        caption: "Fair"
-        description: "Quality meets minimum standards"
-      - name: "Good"
-        caption: "Good"
-        description: "Quality is good and acceptable"
-      - name: "VeryGood"
-        caption: "Very Good"
-        description: "Quality exceeds standard requirements"
-      - name: "Excellent"
-        caption: "Excellent"
-        description: "Quality is exceptional"
-      - name: "Outstanding"
-        caption: "Outstanding"
-        description: "Quality is the highest possible level"
-
-  - name: "TaskPriority"
-    description: "Priority levels for workflow tasks"
-    values:
-      - name: "Critical"
-        caption: "Critical"
-        description: "Highest priority - immediate attention required"
-      - name: "High"
-        caption: "High"
-        description: "High priority - urgent processing needed"
-      - name: "Medium"
-        caption: "Medium"
-        description: "Medium priority - standard processing"
-      - name: "Low"
-        caption: "Low"
-        description: "Low priority - can be processed when time allows"
-      - name: "Deferred"
-        caption: "Deferred"
-        description: "Processing has been postponed"
-
-  - name: "UserRole"
-    description: "User roles in the LAB validation system"
-    values:
-      - name: "LABAdmin"
-        caption: "LAB Administrator"
-        description: "Full system administration rights"
-      - name: "LABTechnician"
-        caption: "LAB Technician"
-        description: "Task execution and data entry"
-      - name: "LABViewer"
-        caption: "LAB Viewer"
-        description: "Read-only access to public information"
-      - name: "LABSupervisor"
-        caption: "LAB Supervisor"
-        description: "Supervisory oversight of technicians"
-      - name: "SystemAdmin"
-        caption: "System Administrator"
-        description: "Technical system administration"
-
-  - name: "AuditActionType"
-    description: "Types of actions recorded in the audit trail"
-    values:
-      - name: "Create"
-        caption: "Create"
-        description: "Entity was created"
-      - name: "Update"
-        caption: "Update"
-        description: "Entity was modified"
-      - name: "Delete"
-        caption: "Delete"
-        description: "Entity was deleted"
-      - name: "View"
-        caption: "View"
-        description: "Entity was accessed for viewing"
-      - name: "Export"
-        caption: "Export"
-        description: "Data was exported"
-      - name: "Import"
-        caption: "Import"
-        description: "Data was imported"
-      - name: "Approve"
-        caption: "Approve"
-        description: "Approval action was taken"
-      - name: "Reject"
-        caption: "Reject"
-        description: "Rejection action was taken"
-      - name: "Assign"
-        caption: "Assign"
-        description: "Task or role was assigned"
-      - name: "Complete"
-        caption: "Complete"
-        description: "Task was completed"
-
-# Security Roles Configuration
+# Security Roles Configuration (Mendix 10.18.1 Compatible)
 security_roles:
   - name: "LABAdmin"
     description: "Full system administration and workflow management"
@@ -326,6 +319,7 @@ security_roles:
       entity_access:
         ProductValidation: "CRUD"
         ImageAcquisition: "CRUD"
+        ImageQualityValidation: "CRUD"
         DetailedImageAcquisition: "CRUD"
         ImageAnalysis: "CRUD"
         KPIExtraction: "CRUD"
@@ -334,13 +328,16 @@ security_roles:
         WorkflowAuditTrail: "CRUD"
         System.WorkflowUserTask: "CRUD"
         System.Workflow: "CRUD"
-        Administration.Account: "CRUD"
+        Administration.Account: "R"
       page_access:
         - "WorkflowAdminCenter"
+        - "WorkflowAdminDashboard"
+        - "TaskAssignment_Management"
+        - "UserManagement_Workflow"
+        - "SystemConfiguration"
+        - "AuditTrailViewer"
         - "TaskInbox"
         - "ValidationResultPage"
-        - "AuditTrailViewer"
-        - "UserManagement"
         - "ReportGenerationPage"
       microflow_access:
         - "ACT_CreateTask"
@@ -362,29 +359,37 @@ security_roles:
           access: "R"
         ImageAcquisition:
           access: "CRUD"
-          xpath: "[TechnicianID = $currentUser/Name]"
+          xpath: "[TechnicianID = '[%CurrentUser%]']"
+        ImageQualityValidation:
+          access: "CRUD" 
+          xpath: "[ValidatedBy = '[%CurrentUser%]']"
         DetailedImageAcquisition:
           access: "CRUD"
-          xpath: "[ProcessedBy = $currentUser/Name]"
+          xpath: "[TechnicianID = '[%CurrentUser%]']"
         ImageAnalysis:
           access: "CRUD"
-          xpath: "[ProcessedBy = $currentUser/Name]"
+          xpath: "[ProcessedBy = '[%CurrentUser%]']"
         KPIExtraction:
           access: "CRUD"
-          xpath: "[ExtractedBy = $currentUser/Name]"
+          xpath: "[ExtractedBy = '[%CurrentUser%]']"
         ValidationResult: "R"
         ValidationReport: "R"
         WorkflowAuditTrail:
           access: "R"
-          xpath: "[PerformedBy = $currentUser/Name]"
+          xpath: "[PerformedBy = '[%CurrentUser%]']"
         System.WorkflowUserTask:
           access: "RU"
-          xpath: "[System.WorkflowUserTask_Account = $currentUser]"
+          xpath: "[System.WorkflowUserTask_Account = '[%CurrentUser%]']"
+        System.Workflow: "R"
+        Administration.Account: "R"
       page_access:
         - "TaskInbox"
         - "TaskDashboard"
         - "ImageAcquisitionTask"
+        - "ImageQualityValidationTask"
         - "DetailedImageAcquisitionTask"
+        - "ImageAnalysisTask"
+        - "KPIExtractionTask"
         - "ReportGenerationPage"
       microflow_access:
         - "ACT_CompleteTask"
@@ -396,360 +401,299 @@ security_roles:
         - "ACT_UpdateAuditTrail"
 
   - name: "LABViewer"
-    description: "Read-only access to public workflow information"
+    description: "Read-only access to completed workflows and public reports"
     permissions:
       entity_access:
         ProductValidation:
           access: "R"
-          xpath: "[IsPublic = true]"
-        ValidationResult:
+          xpath: "[Status = 'Completed']"
+        ImageAcquisition:
           access: "R"
-          xpath: "[IsPublic = true]"
-        ValidationReport:
+          xpath: "[ProductValidation/Status = 'Completed']"
+        ImageQualityValidation:
           access: "R"
-          xpath: "[IsPublic = true]"
+          xpath: "[ImageAcquisition/ProductValidation/Status = 'Completed']"
+        DetailedImageAcquisition:
+          access: "R"
+          xpath: "[ProductValidation/Status = 'Completed']"
+        ImageAnalysis:
+          access: "R"
+          xpath: "[ProductValidation/Status = 'Completed']"
+        KPIExtraction:
+          access: "R"
+          xpath: "[ProductValidation/Status = 'Completed']"
+        ValidationResult: "R"
+        ValidationReport: "R"
         WorkflowAuditTrail:
           access: "R"
-          xpath: "[IsPublic = true]"
+          xpath: "[ProductValidation/Status = 'Completed']"
+        System.WorkflowUserTask:
+          access: "R"
+          xpath: "[System.Workflow/System.Workflow_ProductValidation/Status = 'Completed']"
         System.Workflow:
           access: "R"
-          xpath: "[IsPublic = true]"
+          xpath: "[System.Workflow_ProductValidation/Status = 'Completed']"
+        Administration.Account: "R"
       page_access:
-        - "PublicDashboard"
-        - "ReportGenerationPage"
+        - "PublicReportViewer"
+        - "WorkflowStatusViewer"
+        - "ValidationResultViewer"
+        - "CompletedWorkflowsOverview"
       microflow_access:
         - "SUB_CheckUserPermissions"
-        - "ACT_GenerateValidationReport"
-
-# Workflows Configuration - Compatible with Mendix 10.18.1 & Workflow Commons 3.12.1
-workflows:
-  - name: "LAB_ProductValidation"
-    description: "Main LAB product validation workflow with TRUE/FALSE decision logic - optimized for Mendix 10.18.1"
-    context_entity: "ProductValidation"
-    workflow_commons_version: "3.12.1"
-    compatibility_notes: "Uses Workflow Commons 3.12.1 features, compatible with Mendix 10.18.1 workflow engine"
-    steps:
-      - id: "start"
-        name: "Start"
-        type: "start_event"
-        description: "Workflow initiation - creates ProductValidation context for Mendix 10.18.1"
-        implementation_notes: "Configure to auto-populate InitiatedBy field with current user"
-      - id: "image_acquisition"
-        name: "Image Acquisition"
-        type: "user_task"
-        description: "Capture product validation images - first interactive step"
-        page: "ImageAcquisitionTask"
-        assignee_expression: "$WorkflowContext/InitiatedBy"
-        outcomes: ["completed", "cancelled"]
-        mendix_notes: "Use Workflow Commons 3.12.1 task assignment features"
-        implementation_guide: "Page should allow image upload, capture metadata, auto-calculate quality score"
-      - id: "quality_validation"
-        name: "Quality Validation"
-        type: "decision"
-        description: "CRITICAL: TRUE/FALSE decision point for image quality - determines workflow path"
-        condition: "$WorkflowContext/LAB_ProductValidation/ImageAcquisition/IsQualityApproved"
-        outcomes: ["true", "false"]
-        business_rules: "TRUE continues to detailed processing, FALSE immediately terminates workflow"
-        mendix_notes: "Uses exclusive gateway in Mendix 10.18.1 workflow designer"
-      - id: "detailed_acquisition"
-        name: "Detailed Image Acquisition"
-        type: "user_task"
-        description: "Enhanced image processing and analysis (TRUE path only)"
-        page: "DetailedImageAcquisitionTask"
-        assignee_expression: "$WorkflowContext/InitiatedBy"
-        condition: "quality_validation == true"
-        outcomes: ["completed"]
-        implementation_notes: "Only accessible when quality validation passes"
-      - id: "image_analysis"
-        name: "Automated Analysis"
-        type: "service_task"
-        description: "Automated image analysis and algorithm processing"
-        microflow: "ACT_ProcessImageAnalysis"
-        condition: "quality_validation == true"
-        outcomes: ["completed"]
-        mendix_notes: "Service task calls microflow for automated processing"
-      - id: "kpi_extraction"
-        name: "KPI Extraction"
-        type: "service_task"
-        description: "Extract performance indicators and measurements"
-        microflow: "ACT_ExtractKPIs"
-        condition: "quality_validation == true"
-        outcomes: ["completed"]
-        implementation_notes: "Processes ImageAnalysis results to generate KPIs"
-      - id: "lab_validation"
-        name: "LAB Validation"
-        type: "user_task"
-        description: "Final validation decision by LAB administrator - human oversight"
-        page: "ValidationResultPage"
-        assignee_role: "LABAdmin"
-        condition: "quality_validation == true"
-        outcomes: ["approved", "rejected", "requires_rework"]
-        security_notes: "Restricted to LABAdmin role for final decision authority"
-      - id: "report_generation"
-        name: "Report Generation"
-        type: "service_task"
-        description: "Generate comprehensive validation report"
-        microflow: "ACT_GenerateValidationReport"
-        condition: "quality_validation == true AND lab_validation == approved"
-        outcomes: ["completed"]
-        mendix_notes: "Only generates report for approved validations"
-      - id: "workflow_approved"
-        name: "Workflow Approved"
-        type: "end_event"
-        description: "Successful completion - TRUE outcome achieved"
-        condition: "quality_validation == true AND lab_validation == approved"
-        result: "true"
-        business_impact: "Product validation successful, approved for next stage"
-      - id: "workflow_rejected"
-        name: "Workflow Rejected"
-        type: "end_event"
-        description: "Validation failed - FALSE outcome, workflow terminated"
-        condition: "quality_validation == false OR lab_validation == rejected"
-        result: "false"
-        business_impact: "Product validation failed, requires corrective action"
-    flows:
-      - from: "start"
-        to: "image_acquisition"
-        description: "Initial workflow step"
-      - from: "image_acquisition"
-        to: "quality_validation"
-        condition: "completed"
-        description: "Proceed to quality check after image capture"
-      - from: "quality_validation"
-        to: "detailed_acquisition"
-        condition: "true"
-        description: "Quality approved - continue processing (TRUE path)"
-      - from: "quality_validation"
-        to: "workflow_rejected"
-        condition: "false"
-        description: "Quality rejected - immediate termination (FALSE path)"
-      - from: "detailed_acquisition"
-        to: "image_analysis"
-        condition: "completed"
-        description: "Enhanced image ready for analysis"
-      - from: "image_analysis"
-        to: "kpi_extraction"
-        condition: "completed"
-        description: "Analysis complete, extract KPIs"
-      - from: "kpi_extraction"
-        to: "lab_validation"
-        condition: "completed"
-        description: "KPIs ready for human validation"
-      - from: "lab_validation"
-        to: "report_generation"
-        condition: "approved"
-        description: "Validation approved, generate report"
-      - from: "lab_validation"
-        to: "workflow_rejected"
-        condition: "rejected"
-        description: "Human validation rejected workflow"
-      - from: "report_generation"
-        to: "workflow_approved"
-        condition: "completed"
-        description: "Report generated, workflow successfully completed"
-    mendix_10_18_1_notes: |
-      Implementation notes for Mendix 10.18.1:
-      - Use exclusive gateways for decision points
-      - Configure task assignments using Workflow Commons 3.12.1
-      - Set up proper event handlers for state changes
-      - Configure timeout settings for user tasks
-      - Use workflow context effectively for data passing
-      - Test with different user roles and scenarios
-    workflow_commons_3_12_1_setup: |
-      Workflow Commons 3.12.1 Configuration:
-      1. Install Workflow Commons 3.12.1 from App Store
-      2. Configure in App Settings > Workflows tab
-      3. Set User entity to Administration.Account
-      4. Add required pages to navigation
-      5. Configure security roles properly
-      6. Test task assignment and completion
+        - "DS_GetWorkflowHistory"
 
 # Pages Configuration
 pages:
+  # Administrator Pages
   - name: "WorkflowAdminCenter"
-    type: "admin_dashboard"
-    description: "Central administration hub for workflow management"
-    security_roles: ["LABAdmin"]
-    layout: "Dashboard"
+    description: "Central administration hub with complete workflow oversight"
+    page_type: "admin_dashboard"
+    required_role: "LABAdmin"
     components:
-      - type: "DataGrid"
-        entity: "System.Workflow"
-        title: "All Workflows"
-      - type: "DataGrid"
-        entity: "System.WorkflowUserTask"
-        title: "All Tasks"
-      - type: "ActionButton"
-        action: "ACT_AssignTask"
-        title: "Reassign Task"
-      - type: "Chart"
-        data: "WorkflowMetrics"
-        title: "Workflow Performance"
+      - workflow_overview_grid
+      - task_assignment_panel
+      - user_management_section
+      - system_metrics_dashboard
+    compatibility: "mendix_10_18_1"
 
+  - name: "WorkflowAdminDashboard"
+    description: "Real-time metrics and performance indicators"
+    page_type: "dashboard"
+    required_role: "LABAdmin"
+    components:
+      - kpi_charts
+      - workflow_statistics
+      - performance_metrics
+      - alert_notifications
+    compatibility: "mendix_10_18_1"
+
+  - name: "TaskAssignment_Management"
+    description: "Advanced task routing and assignment management"
+    page_type: "management"
+    required_role: "LABAdmin"
+    components:
+      - task_queue_grid
+      - assignment_rules_editor
+      - workload_balancing_tools
+      - escalation_settings
+    compatibility: "mendix_10_18_1"
+
+  # User/Technician Pages
   - name: "TaskInbox"
-    type: "user_dashboard"
-    description: "Personal task management interface for users"
-    security_roles: ["LABTechnician"]
-    layout: "TaskManagement"
+    description: "Personal task management and execution interface"
+    page_type: "task_list"
+    required_role: "LABTechnician"
     components:
-      - type: "DataGrid"
-        entity: "System.WorkflowUserTask"
-        title: "My Tasks"
-        constraint: "[AssignedTo = $currentUser]"
-      - type: "ActionButton"
-        action: "ACT_CompleteTask"
-        title: "Complete Task"
-      - type: "FormView"
-        entity: "ProductValidation"
-        title: "Task Details"
-
-  - name: "TaskDashboard"
-    type: "user_dashboard"
-    description: "Personal performance metrics and task history"
-    security_roles: ["LABTechnician"]
-    layout: "Dashboard"
-    components:
-      - type: "Chart"
-        data: "MyTaskMetrics"
-        title: "My Performance"
-      - type: "DataGrid"
-        entity: "System.WorkflowEndedUserTask"
-        title: "Completed Tasks"
-        constraint: "[CompletedBy = $currentUser]"
-      - type: "StatCard"
-        metric: "TasksCompleted"
-        title: "Tasks Completed This Week"
-
-  - name: "PublicDashboard"
-    type: "viewer_dashboard"
-    description: "Read-only dashboard for public workflow information"
-    security_roles: ["LABViewer"]
-    layout: "ReadOnlyDashboard"
-    components:
-      - type: "Chart"
-        data: "PublicWorkflowMetrics"
-        title: "Workflow Statistics"
-      - type: "DataGrid"
-        entity: "ValidationReport"
-        title: "Public Reports"
-        constraint: "[IsPublic = true]"
-      - type: "StatCard"
-        metric: "TotalWorkflows"
-        title: "Total Workflows"
+      - my_tasks_grid
+      - task_priority_indicators
+      - quick_action_buttons
+      - task_history_panel
+    compatibility: "mendix_10_18_1"
 
   - name: "ImageAcquisitionTask"
-    type: "task_page"
-    description: "Specialized page for image capture and quality validation"
-    security_roles: ["LABTechnician"]
-    layout: "TaskForm"
+    description: "Image capture and initial quality assessment interface"
+    page_type: "task_form"
+    required_role: "LABTechnician"
     components:
-      - type: "ImageUploader"
-        entity: "ImageAcquisition"
-        field: "ImageFile"
-        title: "Upload Image"
-      - type: "FormView"
-        entity: "ImageAcquisition"
-        title: "Image Details"
-      - type: "ActionButton"
-        action: "ACT_ProcessImageQuality"
-        title: "Validate Quality"
-      - type: "ConditionalView"
-        condition: "IsQualityApproved"
-        title: "Quality Status"
+      - image_upload_widget
+      - capture_settings_form
+      - quality_preview_panel
+      - metadata_entry_form
+    compatibility: "mendix_10_18_1"
+
+  - name: "ImageQualityValidationTask"
+    description: "Critical quality validation interface with TRUE/FALSE decision"
+    page_type: "validation_form"
+    required_role: "LABTechnician"
+    components:
+      - image_quality_analyzer
+      - quality_metrics_display
+      - approval_decision_buttons
+      - rejection_reason_form
+    compatibility: "mendix_10_18_1"
 
   - name: "DetailedImageAcquisitionTask"
-    type: "task_page"
-    description: "Enhanced image processing and analysis interface"
-    security_roles: ["LABTechnician"]
-    layout: "TaskForm"
+    description: "Enhanced image processing and enhancement interface" 
+    page_type: "processing_form"
+    required_role: "LABTechnician"
     components:
-      - type: "ImageViewer"
-        entity: "DetailedImageAcquisition"
-        field: "EnhancedImageFile"
-        title: "Enhanced Image"
-      - type: "FormView"
-        entity: "DetailedImageAcquisition"
-        title: "Processing Details"
-      - type: "TextArea"
-        field: "ProcessingNotes"
-        title: "Processing Notes"
-      - type: "ActionButton"
-        action: "ACT_CompleteTask"
-        title: "Complete Processing"
+      - enhancement_tools_panel
+      - before_after_comparison
+      - processing_parameters_form
+      - quality_improvement_metrics
+    compatibility: "mendix_10_18_1"
 
-  - name: "ValidationResultPage"
-    type: "task_page"
-    description: "Final validation decision interface"
-    security_roles: ["LABAdmin"]
-    layout: "ValidationForm"
+  # Viewer Pages
+  - name: "PublicReportViewer"
+    description: "Read-only access to completed validation reports"
+    page_type: "report_viewer"
+    required_role: "LABViewer"
     components:
-      - type: "FormView"
-        entity: "ValidationResult"
-        title: "Validation Decision"
-      - type: "DropDown"
-        field: "Result"
-        enumeration: "ValidationOutcome"
-        title: "Final Decision"
-      - type: "TextArea"
-        field: "Comments"
-        title: "Validation Comments"
-      - type: "ActionButton"
-        action: "ACT_ValidateWorkflowOutcome"
-        title: "Submit Decision"
+      - report_list_grid
+      - report_preview_panel
+      - search_and_filter_tools
+      - export_options
+    compatibility: "mendix_10_18_1"
 
-  - name: "ReportGenerationPage"
-    type: "report_page"
-    description: "Comprehensive report generation and viewing"
-    security_roles: ["LABAdmin", "LABTechnician", "LABViewer"]
-    layout: "ReportLayout"
+  - name: "WorkflowStatusViewer"
+    description: "Monitor workflow progress and status updates"
+    page_type: "status_monitor" 
+    required_role: "LABViewer"
     components:
-      - type: "FormView"
-        entity: "ValidationReport"
-        title: "Report Configuration"
-      - type: "DropDown"
-        field: "ReportFormat"
-        enumeration: "ReportFormat"
-        title: "Report Format"
-      - type: "ActionButton"
-        action: "ACT_GenerateValidationReport"
-        title: "Generate Report"
-      - type: "FileDownloader"
-        field: "ReportFile"
-        title: "Download Report"
+      - workflow_status_grid
+      - progress_indicators
+      - timeline_visualization
+      - status_filters
+    compatibility: "mendix_10_18_1"
 
-  - name: "AuditTrailViewer"
-    type: "admin_page"
-    description: "Complete audit trail viewer for compliance tracking"
-    security_roles: ["LABAdmin"]
-    layout: "AuditLayout"
-    components:
-      - type: "DataGrid"
-        entity: "WorkflowAuditTrail"
-        title: "Audit Trail"
-      - type: "SearchBox"
-        target: "AuditTrail"
-        title: "Search Actions"
-      - type: "DatePicker"
-        field: "ActionDate"
-        title: "Filter by Date"
-      - type: "ExportButton"
-        data: "AuditTrail"
-        title: "Export Audit Log"
+# Workflow Definition (TRUE/FALSE Decision Logic)
+workflow_definition:
+  name: "LAB_ProductValidation"
+  description: "Complete LAB Product Validation with TRUE/FALSE outcomes"
+  context_entity: "ProductValidation"
+  
+  # Critical Decision Point
+  decision_logic:
+    quality_validation_checkpoint:
+      description: "Critical TRUE/FALSE decision point at image quality validation"
+      condition: "ImageQualityValidation.ValidationResult = true"
+      on_true: "continue_to_detailed_acquisition"
+      on_false: "terminate_workflow_immediately"
+      termination_reason: "Image quality below acceptable standards"
+  
+  # Workflow Flow
+  flow_definition:
+    start_condition: "ProductValidation created and assigned"
+    
+    stages:
+      1_image_acquisition:
+        task: "ImageAcquisitionTask"
+        next_stage: "2_quality_validation"
+        timeout_minutes: 30
+        
+      2_quality_validation:
+        task: "ImageQualityValidationTask"
+        decision_point: true
+        on_pass: "3_detailed_acquisition"
+        on_fail: "workflow_termination"
+        timeout_minutes: 15
+        critical: true
+        
+      3_detailed_acquisition:
+        task: "DetailedImageAcquisitionTask"
+        next_stage: "4_analysis"
+        timeout_minutes: 45
+        conditional: true
+        
+      4_analysis:
+        task: "ImageAnalysisTask"
+        next_stage: "5_kpi_extraction"
+        timeout_minutes: 60
+        
+      5_kpi_extraction:
+        task: "KPIExtractionTask"
+        next_stage: "6_lab_validation"
+        timeout_minutes: 20
+        
+      6_lab_validation:
+        task: "LABValidationTask"
+        next_stage: "7_report_generation"
+        timeout_minutes: 30
+        required_role: "LABAdmin"
+        
+      7_report_generation:
+        task: "ReportGenerationTask"
+        next_stage: "workflow_completion"
+        timeout_minutes: 15
+        
+    end_condition: "All stages completed successfully OR quality validation failed"
 
-  - name: "UserManagement"
-    type: "admin_page"
-    description: "User and role management interface"
-    security_roles: ["LABAdmin"]
-    layout: "UserManagement"
-    components:
-      - type: "DataGrid"
-        entity: "Administration.Account"
-        title: "Users"
-      - type: "FormView"
-        entity: "Administration.Account"
-        title: "User Details"
-      - type: "RoleSelector"
-        field: "UserRoles"
-        title: "Assign Roles"
-      - type: "ActionButton"
-        action: "ACT_UpdateUserRoles"
-        title: "Update Roles"
+# Import/Export Configuration
+import_export:
+  generation_mode: "individual_xml_files"  # NOT MPK for Mendix 10.18.1
+  output_structure:
+    - "domain-model/*.xml"      # Individual entity files
+    - "enumerations/*.xml"      # Individual enumeration files
+    - "microflows/*.xml"        # Individual microflow files
+    - "pages/*.xml"             # Individual page files
+    - "security/*.xml"          # Individual security role files
+  
+  import_order:
+    1: "enumerations"
+    2: "domain-model"
+    3: "microflows"
+    4: "pages"
+    5: "security"
+  
+  dependencies:
+    required_modules:
+      - name: "Workflow Commons"
+        version: "3.12.1"
+        marketplace_url: "https://marketplace.mendix.com/link/component/117066"
+      - name: "Atlas Core"
+        version: "3.x"
+        marketplace_url: "https://marketplace.mendix.com/link/component/117187"
+      - name: "Data Widgets"
+        version: "2.x"
+        marketplace_url: "https://marketplace.mendix.com/link/component/116540"
+
+# Validation and Testing
+validation:
+  compatibility_checks:
+    - mendix_version: "10.18.1"
+    - workflow_commons_version: "3.12.1"
+    - entity_references: "system_entities_only"
+    - xpath_syntax: "current_user_compatible"
+    - no_view_entities: true
+    - no_ended_user_task_entity: true
+  
+  test_scenarios:
+    - name: "Complete Workflow Success"
+      description: "Full workflow execution with quality validation PASS"
+      expected_outcome: "TRUE - Workflow completed successfully"
+    
+    - name: "Quality Validation Failure"
+      description: "Workflow terminated at quality validation checkpoint"
+      expected_outcome: "FALSE - Workflow terminated due to quality failure"
+    
+    - name: "Role-Based Access Control"
+      description: "Verify XPath constraints and role permissions"
+      expected_outcome: "Users only see data they have access to"
+
+# Generation Scripts Configuration
+scripts:
+  python_requirements:
+    - "PyYAML>=6.0"
+    - "pathlib"
+    - "argparse"
+  
+  execution_order:
+    1: "generate-domain-model.py"
+    2: "generate-microflows.py"
+    3: "generate-security.py"
+    4: "validate-project.py"
+  
+  output_validation:
+    check_xml_syntax: true
+    validate_references: true
+    verify_compatibility: true
+
+# Troubleshooting Guide
+troubleshooting:
+  common_issues:
+    mpk_import_errors:
+      description: "MPK generation causes import errors in Mendix 10.18.1"
+      solution: "Use individual XML file import instead of MPK packaging"
+      
+    entity_reference_errors:
+      description: "References to WorkflowEndedUserTask or View Entities"
+      solution: "Use System.WorkflowUserTask and avoid View Entities in 10.18.1"
+      
+    xpath_constraint_errors:
+      description: "XPath constraints not working properly"
+      solution: "Use [%CurrentUser%] syntax compatible with 10.18.1"
+      
+    workflow_commons_compatibility:
+      description: "Workflow Commons version conflicts"
+      solution: "Use exactly version 3.12.1 for Mendix 10.18.1"

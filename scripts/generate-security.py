@@ -1,388 +1,312 @@
 #!/usr/bin/env python3
 """
 LAB Product Validation Workflow - Security Generator
-Generates security roles with proper access controls and XPath constraints
+FIXED VERSION - Compatible with Mendix 10.18.1 and Workflow Commons 3.12.1
 """
 
-import yaml
-import xml.etree.ElementTree as ET
-from pathlib import Path
-import argparse
+import os
 import sys
+import yaml
+import argparse
+from pathlib import Path
 from datetime import datetime
 
 def load_config(config_path):
-    """Load configuration from YAML file with fallback"""
+    """Load configuration from YAML file with proper error handling"""
     try:
-        # Try the specified path first
-        if Path(config_path).exists():
-            with open(config_path, 'r', encoding='utf-8') as file:
-                return yaml.safe_load(file)
-        
-        # Try alternative paths
-        alternative_paths = [
-            Path("config/lab-workflow-config.yaml"),
-            Path("config/security-config.yaml"),
-            Path("../config/lab-workflow-config.yaml")
-        ]
-        
-        for alt_path in alternative_paths:
-            if alt_path.exists():
-                print(f"📁 Using configuration from: {alt_path}")
-                with open(alt_path, 'r', encoding='utf-8') as file:
-                    return yaml.safe_load(file)
-        
-        # If no config found, provide default security configuration
-        print("⚠️ No configuration file found, using default security roles")
-        return get_default_security_config()
-        
-    except Exception as e:
-        print(f"❌ Error loading configuration: {e}")
-        return None
+        with open(config_path, 'r', encoding='utf-8') as file:
+            return yaml.safe_load(file)
+    except FileNotFoundError:
+        print(f"❌ Configuration file not found: {config_path}")
+        sys.exit(1)
+    except yaml.YAMLError as e:
+        print(f"❌ Error parsing YAML config: {e}")
+        sys.exit(1)
 
-def get_default_security_config():
-    """Return default security configuration"""
-    return {
-        'security_roles': [
-            {
-                'name': 'LABAdmin',
-                'description': 'Full system administration and workflow management - compatible with Mendix 10.18.1',
-                'mendix_version': '10.18.1',
-                'workflow_commons_version': '3.12.1',
-                'permissions': {
-                    'entity_access': {
-                        'ProductValidation': 'CRUD',
-                        'ImageAcquisition': 'CRUD',
-                        'DetailedImageAcquisition': 'CRUD',
-                        'ImageAnalysis': 'CRUD',
-                        'KPIExtraction': 'CRUD',
-                        'ValidationResult': 'CRUD',
-                        'ValidationReport': 'CRUD',
-                        'WorkflowAuditTrail': 'CRUD',
-                        'System.WorkflowUserTask': 'CRUD',
-                        'System.Workflow': 'CRUD',
-                        'Administration.Account': 'CRUD'
-                    },
-                    'page_access': [
-                        'WorkflowAdminCenter',
-                        'TaskInbox',
-                        'ValidationResultPage',
-                        'AuditTrailViewer',
-                        'UserManagement',
-                        'ReportGenerationPage'
-                    ],
-                    'microflow_access': [
-                        'ACT_CreateTask',
-                        'ACT_AssignTask',
-                        'ACT_CompleteTask',
-                        'SUB_CheckUserPermissions',
-                        'ACT_ProcessImageQuality',
-                        'DS_GetMyTasks',
-                        'ACT_InitiateWorkflow',
-                        'ACT_GenerateValidationReport',
-                        'ACT_UpdateAuditTrail',
-                        'ACT_ValidateWorkflowOutcome'
-                    ]
-                }
-            },
-            {
-                'name': 'LABTechnician',
-                'description': 'Task execution and data entry for assigned workflows',
-                'permissions': {
-                    'entity_access': {
-                        'ProductValidation': {
-                            'access': 'R',
-                            'xpath': None
-                        },
-                        'ImageAcquisition': {
-                            'access': 'CRUD',
-                            'xpath': '[TechnicianID = $currentUser/Name]'
-                        },
-                        'DetailedImageAcquisition': {
-                            'access': 'CRUD',
-                            'xpath': '[ProcessedBy = $currentUser/Name]'
-                        },
-                        'ImageAnalysis': {
-                            'access': 'CRUD',
-                            'xpath': '[ProcessedBy = $currentUser/Name]'
-                        },
-                        'KPIExtraction': {
-                            'access': 'CRUD',
-                            'xpath': '[ExtractedBy = $currentUser/Name]'
-                        },
-                        'ValidationResult': 'R',
-                        'ValidationReport': 'R',
-                        'WorkflowAuditTrail': {
-                            'access': 'R',
-                            'xpath': '[PerformedBy = $currentUser/Name]'
-                        },
-                        'System.WorkflowUserTask': {
-                            'access': 'RU',
-                            'xpath': '[System.WorkflowUserTask_Account = $currentUser]'
-                        }
-                    },
-                    'page_access': [
-                        'TaskInbox',
-                        'TaskDashboard',
-                        'ImageAcquisitionTask',
-                        'DetailedImageAcquisitionTask',
-                        'ReportGenerationPage'
-                    ],
-                    'microflow_access': [
-                        'ACT_CompleteTask',
-                        'SUB_CheckUserPermissions',
-                        'ACT_ProcessImageQuality',
-                        'DS_GetMyTasks',
-                        'ACT_InitiateWorkflow',
-                        'ACT_GenerateValidationReport',
-                        'ACT_UpdateAuditTrail'
-                    ]
-                }
-            },
-            {
-                'name': 'LABViewer',
-                'description': 'Read-only access to public workflow information',
-                'permissions': {
-                    'entity_access': {
-                        'ProductValidation': {
-                            'access': 'R',
-                            'xpath': '[IsPublic = true]'
-                        },
-                        'ValidationResult': {
-                            'access': 'R',
-                            'xpath': '[IsPublic = true]'
-                        },
-                        'ValidationReport': {
-                            'access': 'R',
-                            'xpath': '[IsPublic = true]'
-                        },
-                        'WorkflowAuditTrail': {
-                            'access': 'R',
-                            'xpath': '[IsPublic = true]'
-                        },
-                        'System.Workflow': {
-                            'access': 'R',
-                            'xpath': '[IsPublic = true]'
-                        }
-                    },
-                    'page_access': [
-                        'PublicDashboard',
-                        'ReportGenerationPage'
-                    ],
-                    'microflow_access': [
-                        'SUB_CheckUserPermissions',
-                        'ACT_GenerateValidationReport'
-                    ]
-                }
-            }
-        ]
-    }
-
-def generate_security_role_xml(role_config):
-    """Generate XML for a single security role"""
-    try:
-        # Create root security role element
-        role = ET.Element("userRole")
-        role.set("name", role_config.get('name', 'UnknownRole'))
-        
-        # Add documentation
-        if 'description' in role_config:
-            documentation = ET.SubElement(role, "documentation")
-            documentation.text = role_config['description']
-        
-        # Add permissions
-        if 'permissions' in role_config:
-            permissions = role_config['permissions']
-            
-            # Entity access permissions
-            if 'entity_access' in permissions:
-                entity_access = ET.SubElement(role, "entityAccess")
-                
-                for entity_name, access_config in permissions['entity_access'].items():
-                    entity_elem = ET.SubElement(entity_access, "entity")
-                    entity_elem.set("name", entity_name)
-                    
-                    if isinstance(access_config, str):
-                        # Simple access level
-                        entity_elem.set("access", access_config)
-                    elif isinstance(access_config, dict):
-                        # Complex access with XPath
-                        entity_elem.set("access", access_config.get('access', 'R'))
-                        if access_config.get('xpath'):
-                            xpath_elem = ET.SubElement(entity_elem, "xpath")
-                            xpath_elem.text = access_config['xpath']
-            
-            # Page access permissions
-            if 'page_access' in permissions:
-                page_access = ET.SubElement(role, "pageAccess")
-                
-                for page_name in permissions['page_access']:
-                    page_elem = ET.SubElement(page_access, "page")
-                    page_elem.set("name", page_name)
-            
-            # Microflow access permissions
-            if 'microflow_access' in permissions:
-                microflow_access = ET.SubElement(role, "microflowAccess")
-                
-                for microflow_name in permissions['microflow_access']:
-                    microflow_elem = ET.SubElement(microflow_access, "microflow")
-                    microflow_elem.set("name", microflow_name)
-        
-        return role
-        
-    except Exception as e:
-        print(f"❌ Error creating security role XML for {role_config.get('name', 'unknown')}: {e}")
-        return None
-
-def create_mendix_xml_header():
-    """Create proper Mendix XML header"""
-    return '<?xml version="1.0" encoding="UTF-8"?>\n'
-
-def format_xml_output(element):
-    """Format XML with proper indentation"""
-    from xml.dom import minidom
-    rough_string = ET.tostring(element, encoding='unicode')
-    reparsed = minidom.parseString(rough_string)
-    return reparsed.toprettyxml(indent="  ").split('\n', 1)[1]  # Remove first line
-
-def create_security_summary(roles_config):
-    """Create a markdown summary of security configuration"""
-    summary = """# LAB Workflow Security Configuration Summary
-
-Generated on: {timestamp}
-
-## Security Roles Overview
-
-""".format(timestamp=datetime.now().strftime("%Y-%m-%d %H:%M:%S"))
+def generate_module_role_xml(role_name, description, entity_access, page_access, microflow_access):
+    """Generate XML for a module role compatible with Mendix 10.18.1"""
     
-    for role in roles_config:
-        summary += f"### 🔐 {role['name']}\n\n"
-        summary += f"**Description:** {role.get('description', 'No description')}\n\n"
+    # Generate entity access rules
+    entity_rules_xml = ""
+    for entity, access in entity_access.items():
+        if isinstance(access, dict):
+            access_type = access.get('access', 'R')
+            xpath = access.get('xpath', '')
+            xpath_xml = f'<xPathConstraint>{xpath}</xPathConstraint>' if xpath else ''
+        else:
+            access_type = access
+            xpath_xml = ''
         
-        if 'permissions' in role:
-            permissions = role['permissions']
-            
-            # Entity access
-            if 'entity_access' in permissions:
-                summary += "**Entity Access:**\n"
-                for entity, access in permissions['entity_access'].items():
-                    if isinstance(access, str):
-                        summary += f"- {entity}: {access}\n"
-                    else:
-                        summary += f"- {entity}: {access.get('access', 'R')}"
-                        if access.get('xpath'):
-                            summary += f" (XPath: `{access['xpath']}`)"
-                        summary += "\n"
-                summary += "\n"
-            
-            # Page access
-            if 'page_access' in permissions:
-                summary += "**Page Access:**\n"
-                for page in permissions['page_access']:
-                    summary += f"- {page}\n"
-                summary += "\n"
-            
-            # Microflow access
-            if 'microflow_access' in permissions:
-                summary += "**Microflow Access:**\n"
-                for microflow in permissions['microflow_access']:
-                    summary += f"- {microflow}\n"
-                summary += "\n"
-        
-        summary += "---\n\n"
+        entity_rules_xml += f"""
+        <entityAccess entity="{entity}" access="{access_type}">
+            {xpath_xml}
+        </entityAccess>"""
     
-    return summary
+    # Generate page access rules
+    page_rules_xml = ""
+    for page in page_access:
+        page_rules_xml += f"""
+        <pageAccess page="{page}" access="Full"/>"""
+    
+    # Generate microflow access rules
+    microflow_rules_xml = ""
+    for microflow in microflow_access:
+        microflow_rules_xml += f"""
+        <microflowAccess microflow="{microflow}" access="Full"/>"""
+    
+    xml_content = f"""<?xml version="1.0" encoding="UTF-8"?>
+<moduleRole xmlns="http://www.mendix.com/metamodel/Projects/7.0.0" 
+            xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" 
+            name="{role_name}">
+    <documentation>{description} - Compatible with Mendix 10.18.1</documentation>
+    <entityAccessRules>{entity_rules_xml}
+    </entityAccessRules>
+    <pageAccessRules>{page_rules_xml}
+    </pageAccessRules>
+    <microflowAccessRules>{microflow_rules_xml}
+    </microflowAccessRules>
+</moduleRole>"""
+    
+    return xml_content
 
 def main():
-    """Main function to generate security roles"""
-    parser = argparse.ArgumentParser(description='Generate LAB Workflow Security Roles')
-    parser.add_argument('--config', default='config/lab-workflow-config.yaml', 
-                       help='Path to configuration file')
-    parser.add_argument('--output', default='output/security', 
-                       help='Output directory for generated files')
-    parser.add_argument('--debug', action='store_true', 
-                       help='Enable debug output')
+    parser = argparse.ArgumentParser(description="Generate LAB Workflow Security Roles")
+    parser.add_argument("--config", required=True, help="Path to configuration file")
+    parser.add_argument("--output", default="output", help="Output directory")
     
     args = parser.parse_args()
     
-    print("🔐 Generating LAB Workflow Security Roles...")
-    print(f"📋 Configuration: {args.config}")
-    print(f"📁 Output: {args.output}")
-    
-    if args.debug:
-        print(f"🐛 Debug mode enabled")
-        print(f"🐛 Python path: {sys.executable}")
-        print(f"🐛 Working directory: {Path.cwd()}")
-    
     # Create output directory
-    output_path = Path(args.output)
-    output_path.mkdir(parents=True, exist_ok=True)
-    print(f"📁 Created output directory: {output_path.absolute()}")
+    output_dir = Path(args.output)
+    security_dir = output_dir / "security"
+    security_dir.mkdir(parents=True, exist_ok=True)
     
-    # Load configuration
-    config = load_config(args.config)
-    if config is None:
-        print("❌ Failed to load configuration")
-        return 1
+    print("🔒 Generating LAB Workflow Security Roles...")
+    print(f"📁 Output directory: {security_dir}")
     
-    if args.debug:
-        print(f"🐛 Loaded configuration keys: {list(config.keys())}")
+    # Define security roles compatible with Mendix 10.18.1
+    security_roles = [
+        {
+            "name": "LABAdmin",
+            "description": "Full system administration and workflow management capabilities",
+            "entity_access": {
+                "ProductValidation": "CRUD",
+                "ImageAcquisition": "CRUD", 
+                "ImageQualityValidation": "CRUD",
+                "DetailedImageAcquisition": "CRUD",
+                "ImageAnalysis": "CRUD",
+                "KPIExtraction": "CRUD",
+                "ValidationResult": "CRUD",
+                "ValidationReport": "CRUD",
+                "WorkflowAuditTrail": "CRUD",
+                "System.WorkflowUserTask": "CRUD",
+                "System.Workflow": "CRUD",
+                "Administration.Account": "R"
+            },
+            "page_access": [
+                "WorkflowAdminCenter",
+                "WorkflowAdminDashboard", 
+                "TaskAssignment_Management",
+                "UserManagement_Workflow",
+                "SystemConfiguration",
+                "AuditTrailViewer",
+                "TaskInbox",
+                "ValidationResultPage",
+                "ReportGenerationPage"
+            ],
+            "microflow_access": [
+                "ACT_CreateTask",
+                "ACT_AssignTask", 
+                "ACT_CompleteTask",
+                "SUB_CheckUserPermissions",
+                "ACT_ProcessImageQuality",
+                "DS_GetMyTasks",
+                "ACT_InitiateWorkflow",
+                "ACT_GenerateValidationReport",
+                "ACT_UpdateAuditTrail",
+                "ACT_ValidateWorkflowOutcome",
+                "SUB_NotifyStakeholders",
+                "DS_GetWorkflowHistory",
+                "ACT_HandleWorkflowException",
+                "SUB_CalculateQualityMetrics",
+                "ACT_ArchiveCompletedWorkflow"
+            ]
+        },
+        {
+            "name": "LABTechnician", 
+            "description": "Task execution and data entry for assigned laboratory workflows",
+            "entity_access": {
+                "ProductValidation": "R",
+                "ImageAcquisition": {
+                    "access": "CRUD",
+                    "xpath": "[TechnicianID = '[%CurrentUser%]']"
+                },
+                "ImageQualityValidation": {
+                    "access": "CRUD", 
+                    "xpath": "[ValidatedBy = '[%CurrentUser%]']"
+                },
+                "DetailedImageAcquisition": {
+                    "access": "CRUD",
+                    "xpath": "[TechnicianID = '[%CurrentUser%]']"
+                },
+                "ImageAnalysis": {
+                    "access": "CRUD",
+                    "xpath": "[ProcessedBy = '[%CurrentUser%]']"
+                },
+                "KPIExtraction": {
+                    "access": "CRUD",
+                    "xpath": "[ExtractedBy = '[%CurrentUser%]']"
+                },
+                "ValidationResult": "R",
+                "ValidationReport": "R",
+                "WorkflowAuditTrail": {
+                    "access": "R",
+                    "xpath": "[PerformedBy = '[%CurrentUser%]']"
+                },
+                "System.WorkflowUserTask": {
+                    "access": "RU",
+                    "xpath": "[System.WorkflowUserTask_Account = '[%CurrentUser%]']"
+                },
+                "System.Workflow": "R",
+                "Administration.Account": "R"
+            },
+            "page_access": [
+                "TaskInbox",
+                "TaskDashboard", 
+                "ImageAcquisitionTask",
+                "ImageQualityValidationTask",
+                "DetailedImageAcquisitionTask",
+                "ImageAnalysisTask",
+                "KPIExtractionTask",
+                "ReportGenerationPage"
+            ],
+            "microflow_access": [
+                "ACT_CompleteTask",
+                "SUB_CheckUserPermissions",
+                "ACT_ProcessImageQuality",
+                "DS_GetMyTasks",
+                "ACT_InitiateWorkflow",
+                "ACT_GenerateValidationReport",
+                "ACT_UpdateAuditTrail",
+                "SUB_NotifyStakeholders",
+                "SUB_CalculateQualityMetrics"
+            ]
+        },
+        {
+            "name": "LABViewer",
+            "description": "Read-only access to completed workflows and public reports",
+            "entity_access": {
+                "ProductValidation": {
+                    "access": "R",
+                    "xpath": "[Status = 'Completed']"
+                },
+                "ImageAcquisition": {
+                    "access": "R", 
+                    "xpath": "[ProductValidation/Status = 'Completed']"
+                },
+                "ImageQualityValidation": {
+                    "access": "R",
+                    "xpath": "[ImageAcquisition/ProductValidation/Status = 'Completed']"
+                },
+                "DetailedImageAcquisition": {
+                    "access": "R",
+                    "xpath": "[ProductValidation/Status = 'Completed']"
+                },
+                "ImageAnalysis": {
+                    "access": "R",
+                    "xpath": "[ProductValidation/Status = 'Completed']"
+                },
+                "KPIExtraction": {
+                    "access": "R",
+                    "xpath": "[ProductValidation/Status = 'Completed']"
+                },
+                "ValidationResult": "R",
+                "ValidationReport": "R",
+                "WorkflowAuditTrail": {
+                    "access": "R",
+                    "xpath": "[ProductValidation/Status = 'Completed']"
+                },
+                "System.WorkflowUserTask": {
+                    "access": "R",
+                    "xpath": "[System.Workflow/System.Workflow_ProductValidation/Status = 'Completed']"
+                },
+                "System.Workflow": {
+                    "access": "R",
+                    "xpath": "[System.Workflow_ProductValidation/Status = 'Completed']"
+                },
+                "Administration.Account": "R"
+            },
+            "page_access": [
+                "PublicReportViewer",
+                "WorkflowStatusViewer", 
+                "ValidationResultViewer",
+                "CompletedWorkflowsOverview"
+            ],
+            "microflow_access": [
+                "SUB_CheckUserPermissions",
+                "DS_GetWorkflowHistory"
+            ]
+        }
+    ]
     
-    # Generate security roles
-    if 'security_roles' in config and config['security_roles']:
-        print(f"🔐 Found {len(config['security_roles'])} security roles to generate")
+    # Generate security role XML files
+    for role in security_roles:
+        xml_content = generate_module_role_xml(
+            role["name"],
+            role["description"],
+            role["entity_access"],
+            role["page_access"], 
+            role["microflow_access"]
+        )
         
-        generated_count = 0
-        for role_config in config['security_roles']:
-            try:
-                role_name = role_config.get('name', 'Unknown')
-                print(f"🔨 Generating: {role_name}")
-                
-                # Create security role XML
-                role_xml = generate_security_role_xml(role_config)
-                if role_xml is not None:
-                    # Save to file with proper formatting
-                    role_file = output_path / f"{role_name}.xml"
-                    
-                    with open(role_file, 'w', encoding='utf-8') as f:
-                        f.write(create_mendix_xml_header())
-                        f.write(format_xml_output(role_xml))
-                    
-                    print(f"✅ Generated: {role_name}.xml")
-                    generated_count += 1
-                else:
-                    print(f"❌ Failed to generate XML for {role_name}")
-                    
-            except Exception as e:
-                print(f"❌ Error generating {role_config.get('name', 'unknown')}: {e}")
-                if args.debug:
-                    import traceback
-                    traceback.print_exc()
+        role_file = security_dir / f"{role['name']}.xml"
+        with open(role_file, 'w', encoding='utf-8') as f:
+            f.write(xml_content)
         
-        # Generate security summary
-        summary = create_security_summary(config['security_roles'])
-        summary_file = output_path / "SECURITY_SUMMARY.md"
-        with open(summary_file, 'w', encoding='utf-8') as f:
-            f.write(summary)
-        print(f"📋 Generated security summary: SECURITY_SUMMARY.md")
-        
-        print(f"📈 Successfully generated {generated_count} security roles")
-    else:
-        print("⚠️ No security roles found in configuration")
+        print(f"✅ Generated security role: {role['name']}.xml")
     
-    print("🎉 Security roles generation completed!")
-    print(f"📁 Files saved to: {output_path.absolute()}")
-    return 0
+    print(f"\n🎉 Security roles generation completed!")
+    print(f"🔒 Generated {len(security_roles)} security roles")
+    print(f"📁 Files saved to: {security_dir}")
+    
+    # Generate security summary
+    summary_file = security_dir / "SECURITY_SUMMARY.txt"
+    with open(summary_file, 'w', encoding='utf-8') as f:
+        f.write("LAB Product Validation Workflow - Security Summary\n")
+        f.write("=" * 60 + "\n\n")
+        f.write(f"Generated on: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}\n")
+        f.write(f"Compatible with: Mendix 10.18.1 + Workflow Commons 3.12.1\n\n")
+        
+        f.write("Security Roles Overview:\n")
+        f.write("-" * 30 + "\n")
+        for role in security_roles:
+            f.write(f"• {role['name']}\n")
+            f.write(f"  Description: {role['description']}\n")
+            f.write(f"  Entity Access: {len(role['entity_access'])} entities\n")
+            f.write(f"  Page Access: {len(role['page_access'])} pages\n")
+            f.write(f"  Microflow Access: {len(role['microflow_access'])} microflows\n\n")
+        
+        f.write("XPath Constraints Applied:\n")
+        f.write("-" * 30 + "\n")
+        f.write("• LABTechnician: Data filtered by current user ownership\n")
+        f.write("• LABViewer: Only completed workflows visible\n")
+        f.write("• LABAdmin: Full access to all data\n\n")
+        
+        f.write("Compatibility Notes:\n")
+        f.write("-" * 20 + "\n")
+        f.write("• Uses System.WorkflowUserTask (not WorkflowEndedUserTask)\n")
+        f.write("• Compatible with Workflow Commons 3.12.1\n")
+        f.write("• XPath constraints use [%CurrentUser%] syntax\n")
+        f.write("• No View Entities used (Mendix 11+ feature)\n")
+    
+    print(f"📋 Generated summary: SECURITY_SUMMARY.txt")
+    
+    return True
 
 if __name__ == "__main__":
     try:
-        exit_code = main()
-        sys.exit(exit_code)
-    except KeyboardInterrupt:
-        print("\n⚠️ Generation cancelled by user")
-        sys.exit(1)
+        success = main()
+        sys.exit(0 if success else 1)
     except Exception as e:
-        print(f"❌ Unexpected error: {e}")
-        import traceback
-        traceback.print_exc()
+        print(f"❌ Fatal error: {e}")
         sys.exit(1)
